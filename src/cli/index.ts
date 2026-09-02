@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import type { Writable } from 'node:stream';
 import { type LoadedConfig, loadConfig } from '../config/load-config.ts';
 import { ConfigError } from '../config/schema.ts';
+import { GitError } from '../files/changed-files.ts';
 import { type CliArguments, parseCliArguments, USAGE, UsageError } from './args.ts';
 import { runAnalyze } from './commands/analyze.ts';
 import { runExplain } from './commands/explain.ts';
@@ -61,6 +62,10 @@ async function dispatch(args: CliArguments, context: CliContext): Promise<number
     }
     return await runAnalyze(args, loaded, context);
   } catch (error) {
+    if (error instanceof GitError) {
+      writeLine(context.stderr, `qualint: ${error.message}`);
+      return EXIT_FAILURE;
+    }
     const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
     writeLine(context.stderr, `qualint: internal error: ${detail}`);
     return EXIT_FAILURE;

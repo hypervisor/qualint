@@ -269,6 +269,55 @@ overrides:
     assert.match(bad.stderr, /Unknown preset "lenient"/);
   });
 
+  it('analyzes only changed files with --changed and --since', async () => {
+    const dir = await fixture({ 'src/old.ts': COMPLEX, 'src/kept.ts': SIMPLE });
+    const git = (...args: string[]) =>
+      execFileAsync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', ...args], { cwd: dir });
+    await git('init', '-q', '-b', 'main');
+    await git('add', '-A');
+    await git('commit', '-q', '-m', 'base');
+
+    const nothing = await cli(dir, '--changed');
+    assert.equal(nothing.code, 0);
+    assert.equal(nothing.stdout, '✔ no changed files to analyze\n');
+
+    // Committed on a branch, then modified in the working tree, then a new untracked file.
+    await git('checkout', '-q', '-b', 'feature');
+    await fs.writeFile(path.join(dir, 'src', 'kept.ts'), COMPLEX.replace('process', 'branchChange'));
+    await git('commit', '-q', '-am', 'branch work');
+    await fs.writeFile(path.join(dir, 'src', 'old.ts'), COMPLEX.replace('process', 'workingTree'));
+    await fs.writeFile(path.join(dir, 'src', 'fresh.ts'), COMPLEX.replace('process', 'untracked'));
+    await fs.writeFile(path.join(dir, 'notes.txt'), 'ignored by extension');
+
+    const working = await cli(dir, '--changed', '--verbose');
+    assert.equal(working.code, 1);
+    assert.match(working.stderr, /2 of 3 files changed in the working tree/);
+    assert.match(working.stdout, /src\/fresh\.ts/);
+    assert.match(working.stdout, /src\/old\.ts/);
+    assert.doesNotMatch(working.stdout, /src\/kept\.ts/);
+
+    const since = await cli(dir, '--since', 'main');
+    assert.equal(since.code, 1);
+    assert.match(since.stdout, /src\/kept\.ts/);
+    assert.match(since.stdout, /src\/old\.ts/);
+    assert.match(since.stdout, /src\/fresh\.ts/);
+    assert.match(since.stdout, /✖ 3 problems/);
+
+    const scoped = await cli(dir, '--changed', 'src/old.ts', 'src/kept.ts');
+    assert.match(scoped.stdout, /^src\/old\.ts\n/);
+    assert.doesNotMatch(scoped.stdout, /fresh|kept/);
+
+    const json = await cli(dir, '--changed', '--format', 'json');
+    assert.equal(JSON.parse(json.stdout).summary.analyzedFiles, 2);
+  });
+
+  it('fails clearly when --changed is used outside a git repository', async () => {
+    const dir = await fixture({ 'src/a.ts': SIMPLE });
+    const result = await cli(dir, '--changed');
+    assert.equal(result.code, 2);
+    assert.match(result.stderr, /^qualint: git rev-parse --show-toplevel failed/);
+  });
+
   it('rejects bad arguments with exit 2 and usage', async () => {
     const dir = await fixture({});
     const result = await cli(dir, '--format', 'xml');

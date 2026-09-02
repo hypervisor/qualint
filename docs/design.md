@@ -39,7 +39,7 @@ The first release analyzes individual source files without building a TypeScript
 - Style, naming, formatting, correctness, or security linting already covered by ESLint and other tools.
 - A combined quality grade or maintainability score.
 - Inline suppression comments. Exceptions belong in configuration overrides.
-- Baselines and changed-lines-only analysis. These may be introduced later.
+- Baselines and changed-lines-only analysis. These may be introduced later. (File-level change filtering shipped early as `--changed` and `--since <ref>`; it selects files git reports as changed and analyzes them in full.)
 
 ## 4. User experience
 
@@ -66,6 +66,10 @@ qualint explain complexity/cognitive
 
 # Use a specific configuration file
 qualint --config ./config/.qualintrc.yaml
+
+# Only files changed in git: working tree vs HEAD, or since a branch's merge-base
+qualint --changed
+qualint --since origin/main
 
 # Write a starter configuration for a preset
 qualint init --preset strict

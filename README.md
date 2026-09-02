@@ -56,6 +56,8 @@ qualint src/orders/process-order.ts      # a file
 qualint apps/api packages/shared         # several paths, shell globs work too
 qualint --format json                    # machine-readable output
 qualint --max-warnings 0                 # treat warnings as failures
+qualint --changed                        # only files modified in the working tree
+qualint --since origin/main              # only files changed on this branch
 qualint --verbose                        # also list clean files and the config in use
 qualint --config ./config/.qualintrc.yaml
 qualint inspect src/orders/process-order.ts   # every metric for a file
@@ -68,6 +70,22 @@ walked recursively. `node_modules` and hidden directories are never entered.
 
 Output is sorted by path, line, column and rule, so two runs on the same code
 produce identical text. Paths use forward slashes on every platform.
+
+### Only what changed
+
+`--changed` restricts the run to files git reports as modified: staged,
+unstaged and untracked (but not ignored) files, compared with `HEAD`. `--since
+<ref>` widens that to everything changed since the merge-base with a branch,
+which is what you want in CI on a pull request:
+
+```bash
+qualint --since origin/main
+```
+
+Both are filters on top of the normal file selection, so `include`, `exclude`
+and positional paths still apply. The granularity is the file: a changed file is
+analyzed in full, so an old oversized function in a file you touched will still
+be reported. Line-level filtering is on the list.
 
 ### Exit codes
 

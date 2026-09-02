@@ -12,6 +12,10 @@ export interface CliArguments {
   maxWarnings: number | null;
   color: boolean | undefined;
   verbose: boolean;
+  /** Analyze only files changed in git. */
+  changed: boolean;
+  /** Ref whose merge-base with HEAD bounds the change set; implies `changed`. */
+  since: string | undefined;
   /** init only: preset to write. */
   preset: PresetName;
   /** init only: overwrite an existing configuration file. */
@@ -41,6 +45,8 @@ Options:
   --format <stylish|json>   Output format (default: stylish)
   --config <path>           Configuration file (default: nearest .qualintrc.json)
   --max-warnings <n>        Fail when more than n warnings are reported
+  --changed                 Only files changed in the working tree (staged, unstaged, untracked)
+  --since <ref>             Only files changed since the merge-base with <ref>, e.g. origin/main
   --verbose                 Also list clean files and the configuration in use
   --preset <name>           Preset for init (default: standard)
   --force                   Let init overwrite an existing configuration file
@@ -63,6 +69,8 @@ export function parseCliArguments(argv: readonly string[]): CliArguments {
         'max-warnings': { type: 'string' },
         color: { type: 'boolean' },
         verbose: { type: 'boolean' },
+        changed: { type: 'boolean' },
+        since: { type: 'string' },
         preset: { type: 'string' },
         force: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -88,6 +96,8 @@ export function parseCliArguments(argv: readonly string[]): CliArguments {
     maxWarnings: parseMaxWarnings(values['max-warnings']),
     color: values.color,
     verbose: values.verbose ?? false,
+    changed: (values.changed ?? false) || values.since !== undefined,
+    since: values.since,
     preset: parsePreset(values.preset),
     force: values.force ?? false,
     help: values.help ?? false,

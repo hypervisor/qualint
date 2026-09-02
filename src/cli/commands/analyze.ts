@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeFile } from '../../analysis/analyze-file.ts';
 import { type LoadedConfig, resolveRulesForFile } from '../../config/load-config.ts';
+import { listChangedFiles } from '../../files/changed-files.ts';
 import { discoverFiles } from '../../files/discover-files.ts';
 import { toPosixPath } from '../../files/glob.ts';
 import { formatJson } from '../../formatters/json.ts';
@@ -74,17 +75,39 @@ export async function runAnalyze(args: CliArguments, loaded: LoadedConfig, conte
 
   if (context.verbose) {
     const source =
-      loaded.configPath === null ? 'built-in defaults (no .qualintrc.json found)' : toPosixPath(path.relative(context.cwd, loaded.configPath));
+      loaded.configPath === null ? 'built-in defaults (no .qualintrc.yaml found)' : toPosixPath(path.relative(context.cwd, loaded.configPath));
     writeLine(context.stderr, `qualint: configuration: ${source}`);
   }
+  const files = args.changed ? await onlyChanged(discovered.files, args, context) : discovered.files;
+  if (args.changed && files.length === 0) {
+    if (args.format === 'json') {
+      context.stdout.write(formatJson([], summarize([]), { includeFunctions: false }));
+    } else {
+      writeLine(context.stdout, '✔ no changed files to analyze');
+    }
+    return EXIT_OK;
+  }
   const outcomes: FileOutcome[] = [];
-  for (const file of discovered.files) {
+  for (const file of files) {
     outcomes.push(await analyzePath(file, loaded, context.cwd));
   }
   outcomes.sort((a, b) => compareStrings(a.path, b.path));
   const summary = summarize(outcomes);
   writeReport(outcomes, summary, args, context);
   return exitCodeFor(summary, args, context);
+}
+
+/** Keeps only the discovered files that git reports as changed. Throws GitError outside a repository. */
+async function onlyChanged(files: readonly string[], args: CliArguments, context: CliContext): Promise<string[]> {
+  const changed = await listChangedFiles({ cwd: context.cwd, since: args.since });
+  // git reports resolved paths; the working directory may be reached through a symlink.
+  const resolved = await Promise.all(files.map((file) => fs.realpath(file).catch(() => file)));
+  const kept = files.filter((_file, index) => changed.has(resolved[index]!));
+  if (context.verbose) {
+    const scope = args.since === undefined ? 'in the working tree' : `since ${args.since}`;
+    writeLine(context.stderr, `qualint: ${kept.length} of ${files.length} files changed ${scope}`);
+  }
+  return kept;
 }
 
 function writeReport(outcomes: readonly FileOutcome[], summary: RunSummary, args: CliArguments, context: CliContext): void {
