@@ -1,6 +1,7 @@
 import type { RuleId, Severity } from '../types.ts';
 import { RULES, isRuleId } from '../rules/registry.ts';
 import { type RuleSetting } from './defaults.ts';
+import { DEFAULT_PRESET, isPresetName, PRESET_NAMES, type PresetName, presetMax } from './presets.ts';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -15,6 +16,8 @@ export interface ConfigOverride {
 }
 
 export interface QualintConfig {
+  /** Threshold preset that rule values without an explicit max fall back to. */
+  preset: PresetName;
   /** null means "every supported file below the base directory". */
   include: string[] | null;
   /** null means "use the default exclusions". */
@@ -23,7 +26,7 @@ export interface QualintConfig {
   overrides: ConfigOverride[];
 }
 
-const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set(['include', 'exclude', 'rules', 'overrides']);
+const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set(['preset', 'include', 'exclude', 'rules', 'overrides']);
 const OVERRIDE_KEYS: ReadonlySet<string> = new Set(['files', 'rules']);
 const SEVERITIES: ReadonlySet<string> = new Set(['off', 'warn', 'error']);
 
@@ -35,9 +38,10 @@ export function validateConfig(raw: unknown): QualintConfig {
   const root = expectObject(raw, 'configuration');
   for (const key of Object.keys(root)) {
     if (!TOP_LEVEL_KEYS.has(key)) {
-      throw new ConfigError(`Unknown property "${key}"; expected one of include, exclude, rules, overrides`);
+      throw new ConfigError(`Unknown property "${key}"; expected one of preset, include, exclude, rules, overrides`);
     }
   }
+  const preset = validatePreset(root['preset']);
   const overridesRaw = root['overrides'];
   const overrides: ConfigOverride[] = [];
   if (overridesRaw !== undefined) {
@@ -56,18 +60,29 @@ export function validateConfig(raw: unknown): QualintConfig {
       if (files === null || files.length === 0) {
         throw new ConfigError(`"${path}.files" must be a non-empty array of glob patterns`);
       }
-      overrides.push({ files, rules: validateRules(record['rules'], `${path}.rules`) });
+      overrides.push({ files, rules: validateRules(record['rules'], `${path}.rules`, preset) });
     });
   }
   return {
+    preset,
     include: expectStringArray(root['include'], 'include'),
     exclude: expectStringArray(root['exclude'], 'exclude'),
-    rules: validateRules(root['rules'], 'rules'),
+    rules: validateRules(root['rules'], 'rules', preset),
     overrides,
   };
 }
 
-function validateRules(raw: unknown, path: string): Map<RuleId, RuleSetting> {
+function validatePreset(raw: unknown): PresetName {
+  if (raw === undefined) {
+    return DEFAULT_PRESET;
+  }
+  if (typeof raw !== 'string' || !isPresetName(raw)) {
+    throw new ConfigError(`"preset" must be one of ${PRESET_NAMES.join(', ')}; got ${JSON.stringify(raw)}`);
+  }
+  return raw;
+}
+
+function validateRules(raw: unknown, path: string, preset: PresetName): Map<RuleId, RuleSetting> {
   const settings = new Map<RuleId, RuleSetting>();
   if (raw === undefined) {
     return settings;
@@ -77,12 +92,12 @@ function validateRules(raw: unknown, path: string): Map<RuleId, RuleSetting> {
     if (!isRuleId(id)) {
       throw new ConfigError(`Unknown rule "${id}" in "${path}"; known rules: ${[...RULES.keys()].join(', ')}`);
     }
-    settings.set(id, validateRuleValue(id, value, `${path}["${id}"]`));
+    settings.set(id, validateRuleValue(id, value, `${path}["${id}"]`, preset));
   }
   return settings;
 }
 
-function validateRuleValue(id: RuleId, value: unknown, path: string): RuleSetting {
+function validateRuleValue(id: RuleId, value: unknown, path: string, preset: PresetName): RuleSetting {
   const rule = RULES.get(id)!;
   let severity: unknown;
   let options: unknown;
@@ -101,7 +116,7 @@ function validateRuleValue(id: RuleId, value: unknown, path: string): RuleSettin
   if (severity === 'off') {
     return 'off';
   }
-  let max = rule.defaultMax;
+  let max = presetMax(id, preset);
   if (options !== undefined) {
     const record = expectObject(options, path);
     for (const key of Object.keys(record)) {

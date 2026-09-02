@@ -23,14 +23,23 @@ describe('config validation', () => {
       },
     });
     assert.equal(config.rules.get('complexity/cyclomatic'), 'off');
-    assert.deepEqual(config.rules.get('complexity/cognitive'), { severity: 'warn', options: { max: 15 } });
+    assert.deepEqual(config.rules.get('complexity/cognitive'), { severity: 'warn', options: { max: 30 } });
     assert.deepEqual(config.rules.get('complexity/nesting'), { severity: 'warn', options: { max: 6 } });
     assert.deepEqual(config.rules.get('complexity/halstead-difficulty'), { severity: 'error', options: { max: 12.5 } });
-    assert.deepEqual(config.rules.get('size/file'), { severity: 'error', options: { max: 500 } });
+    assert.deepEqual(config.rules.get('size/file'), { severity: 'error', options: { max: 800 } });
+    assert.equal(config.preset, 'standard');
+  });
+
+  it('uses the preset for bare severities and rejects unknown presets', () => {
+    const strict = validateConfig({ preset: 'strict', rules: { 'size/function': 'warn' } });
+    assert.deepEqual(strict.rules.get('size/function'), { severity: 'warn', options: { max: 60 } });
+    const relaxed = validateConfig({ preset: 'relaxed', overrides: [{ files: ['*.ts'], rules: { 'size/function': ['error'] } }] });
+    assert.deepEqual(relaxed.overrides[0]!.rules.get('size/function'), { severity: 'error', options: { max: 200 } });
+    rejects({ preset: 'lenient' }, /"preset" must be one of strict, standard, relaxed; got "lenient"/);
   });
 
   it('names the invalid property in every error', () => {
-    rejects({ includes: [] }, /Unknown property "includes"/);
+    rejects({ includes: [] }, /Unknown property "includes"; expected one of preset, include/);
     rejects({ include: 'src' }, /"include" must be an array of strings/);
     rejects({ rules: { 'complexity/unknown': 'error' } }, /Unknown rule "complexity\/unknown"/);
     rejects({ rules: { 'size/file': 'loud' } }, /rules\["size\/file"\].*invalid severity "loud"/);
@@ -51,8 +60,18 @@ describe('config loading and resolution', () => {
     const loaded = await loadConfig({ cwd: dir });
     assert.equal(loaded.configPath, null);
     const rules = resolveRulesForFile(loaded, path.join(dir, 'a.ts'));
-    assert.deepEqual(rules.get('complexity/cyclomatic'), { severity: 'error', options: { max: 10 } });
+    assert.deepEqual(rules.get('complexity/cyclomatic'), { severity: 'error', options: { max: 20 } });
     assert.equal(rules.has('complexity/halstead-difficulty'), false);
+  });
+
+  it('applies a configured preset to every rule not set explicitly', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qualint-'));
+    await fs.writeFile(path.join(dir, '.qualintrc.yaml'), 'preset: relaxed\nrules:\n  size/parameters: [error, { max: 4 }]\n');
+    const loaded = await loadConfig({ cwd: dir });
+    const rules = resolveRulesForFile(loaded, path.join(dir, 'a.ts'));
+    assert.deepEqual(rules.get('complexity/cyclomatic'), { severity: 'error', options: { max: 30 } });
+    assert.deepEqual(rules.get('size/function'), { severity: 'error', options: { max: 200 } });
+    assert.deepEqual(rules.get('size/parameters'), { severity: 'error', options: { max: 4 } });
   });
 
   it('searches upward and applies overrides relative to the config directory', async () => {
@@ -75,17 +94,17 @@ describe('config loading and resolution', () => {
 
     const plain = resolveRulesForFile(loaded, path.join(nested, 'a.ts'));
     assert.deepEqual(plain.get('size/function'), { severity: 'warn', options: { max: 40 } });
-    assert.deepEqual(plain.get('complexity/halstead-difficulty'), { severity: 'error', options: { max: 20 } });
+    assert.deepEqual(plain.get('complexity/halstead-difficulty'), { severity: 'error', options: { max: 30 } });
     assert.deepEqual(plain.get('complexity/nesting'), { severity: 'error', options: { max: 3 } });
     assert.equal(plain.has('size/file'), true);
 
     const test = resolveRulesForFile(loaded, path.join(nested, 'a.test.ts'));
     // An override replaces the whole value: max falls back to the rule default, not to 40.
-    assert.deepEqual(test.get('size/function'), { severity: 'error', options: { max: 60 } });
+    assert.deepEqual(test.get('size/function'), { severity: 'error', options: { max: 120 } });
     assert.equal(test.has('size/file'), false);
 
     const elsewhere = resolveRulesForFile(loaded, path.join(root, 'packages', 'web', 'a.ts'));
-    assert.deepEqual(elsewhere.get('complexity/nesting'), { severity: 'error', options: { max: 4 } });
+    assert.deepEqual(elsewhere.get('complexity/nesting'), { severity: 'error', options: { max: 5 } });
   });
 
   it('reads YAML with comments and prefers it over JSON in the same directory', async () => {

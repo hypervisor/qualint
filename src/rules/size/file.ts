@@ -1,10 +1,11 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 
 export const fileSizeRule: RuleDefinition = {
   id: 'size/file',
   scope: 'file',
   defaultSeverity: 'error',
-  defaultMax: 500,
+  defaultMax: presetMax('size/file', DEFAULT_PRESET),
   fractional: false,
   summary: 'Source lines in a file, excluding blank and comment-only lines.',
   explanation: `A source line is a physical line that contains at least one non-whitespace

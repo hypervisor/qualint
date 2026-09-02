@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { formatBig, functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const npathRule: RuleDefinition = {
   id: 'complexity/npath',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 200,
+  defaultMax: presetMax('complexity/npath', DEFAULT_PRESET),
   fractional: false,
   summary: 'Number of acyclic execution paths through a function; sequential decisions multiply.',
   explanation: `Paths are composed recursively:

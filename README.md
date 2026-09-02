@@ -13,9 +13,9 @@ deliberately quiet: a clean run prints one line.
 $ qualint
 src/orders/process-order.ts
 
-  42:1  error  Function `processOrder` has cognitive complexity 23; maximum is 15  complexity/cognitive
-  42:1  error  Function `processOrder` contains 78 source lines; maximum is 60     size/function
-  67:7  error  Nesting depth is 5; maximum is 4                                    complexity/nesting
+  42:1  error  Function `processOrder` has cognitive complexity 38; maximum is 30  complexity/cognitive
+  42:1  error  Function `processOrder` contains 131 source lines; maximum is 120   size/function
+  67:7  error  Nesting depth is 6; maximum is 5                                    complexity/nesting
 
 ✖ 3 problems (3 errors, 0 warnings)
 ```
@@ -83,10 +83,11 @@ force exit code 2 so it can't be mistaken for a clean run.
 
 qualint looks for `.qualintrc.yaml` (also `.yml` or `.json`), starting in the
 current directory and walking up. Patterns are relative to the directory the
-file lives in. With no file, the defaults below apply to every supported file
-under the current directory.
+file lives in. With no file, the `standard` preset applies to every supported
+file under the current directory.
 
 ```yaml
+preset: standard   # strict | standard | relaxed
 include:
   - src/**/*
   - apps/**/*
@@ -98,27 +99,49 @@ exclude:
   - '**/coverage/**'
   - '**/*.generated.*'
 rules:
-  complexity/cyclomatic: [error, { max: 10 }]
-  complexity/cognitive: [error, { max: 15 }]
-  complexity/npath: [error, { max: 200 }]
-  complexity/nesting: [error, { max: 4 }]
-  complexity/condition: [error, { max: 5 }]
+  complexity/cyclomatic: [error, { max: 20 }]
+  complexity/cognitive: [error, { max: 30 }]
+  complexity/npath: [error, { max: 1000 }]
+  complexity/nesting: [error, { max: 5 }]
+  complexity/condition: [error, { max: 7 }]
   complexity/halstead-difficulty: off
-  size/file: [error, { max: 500 }]
-  size/function: [error, { max: 60 }]
-  size/statements: [error, { max: 30 }]
-  size/parameters: [error, { max: 5 }]
+  size/file: [error, { max: 800 }]
+  size/function: [error, { max: 120 }]
+  size/statements: [error, { max: 60 }]
+  size/parameters: [error, { max: 6 }]
 overrides:
   - files: ['**/*.test.*', '**/*.spec.*']
     rules:
-      size/function: [error, { max: 100 }]
+      size/function: off
       size/file: off
 ```
 
-A rule value is `off`, `warn`, `error`, or `[severity, { max: n }]`.
-A bare severity keeps the default limit. Overrides are applied in order and
-each one replaces the whole value for a rule, so `["error"]` in an override
-resets `max` to the default rather than keeping the top-level one.
+A rule value is `off`, `warn`, `error`, or `[severity, { max: n }]`. A bare
+severity keeps the preset's limit. Overrides are applied in order and each one
+replaces the whole value for a rule, so `[error]` in an override resets `max`
+to the preset's value rather than keeping the top-level one.
+
+### Presets
+
+| Rule                             | strict | standard | relaxed |
+| -------------------------------- | -----: | -------: | ------: |
+| `complexity/cyclomatic`          |     10 |       20 |      30 |
+| `complexity/cognitive`           |     15 |       30 |      50 |
+| `complexity/npath`               |    200 |     1000 |    5000 |
+| `complexity/nesting`             |      4 |        5 |       6 |
+| `complexity/condition`           |      5 |        7 |      10 |
+| `complexity/halstead-difficulty` |     20 |       30 |      45 |
+| `size/file`                      |    500 |      800 |    1500 |
+| `size/function`                  |     60 |      120 |     200 |
+| `size/statements`                |     30 |       60 |     100 |
+| `size/parameters`                |      5 |        6 |       8 |
+
+`standard` is meant to let ordinary application code through: a fifty-line
+validation function with a handful of loops, or a mid-sized React component
+with some conditional rendering, should pass. `strict` is for code you want to
+keep small, like a shared library. `relaxed` is for getting an existing
+codebase under the gate before tightening. Halstead difficulty is off in all
+three; the number is the limit used if you turn it on.
 
 Anything unknown (a property, a rule name, an option) is a configuration error.
 The message names the offending key and the exit code is 2.
@@ -133,18 +156,18 @@ put it in an override.
 
 ## Rules
 
-| Rule                             | Scope     | Default        | What it measures                                                         |
-| -------------------------------- | --------- | -------------- | ------------------------------------------------------------------------ |
-| `complexity/cyclomatic`          | function  | error, max 10  | Decision points: `if`, loops, `catch`, `?:`, `case`, `&& \|\| ??`, `?.`, default values |
-| `complexity/cognitive`           | function  | error, max 15  | How hard the function is to follow. Nested control flow costs more.      |
-| `complexity/npath`               | function  | error, max 200 | Acyclic execution paths. Decisions in sequence multiply.                 |
-| `complexity/nesting`             | function  | error, max 4   | Deepest stack of enclosing control-flow constructs                       |
-| `complexity/condition`           | condition | error, max 5   | Decision clauses in a single `if`/loop test, ternary or `&&` chain       |
-| `complexity/halstead-difficulty` | function  | off, max 20    | Halstead difficulty over the function's own tokens                       |
-| `size/file`                      | file      | error, max 500 | Source lines, ignoring blank and comment-only lines                      |
-| `size/function`                  | function  | error, max 60  | Source lines within the function                                         |
-| `size/statements`                | function  | error, max 30  | Executable statements the function owns                                  |
-| `size/parameters`                | function  | error, max 5   | Parameters, not counting a TypeScript `this` parameter                   |
+| Rule                             | Scope     | Default         | What it measures                                                         |
+| -------------------------------- | --------- | --------------- | ------------------------------------------------------------------------ |
+| `complexity/cyclomatic`          | function  | error, max 20   | Decision points: `if`, loops, `catch`, `?:`, `case`, `&& \|\| ??`, `?.`, default values |
+| `complexity/cognitive`           | function  | error, max 30   | How hard the function is to follow. Nested control flow costs more.      |
+| `complexity/npath`               | function  | error, max 1000 | Acyclic execution paths. Decisions in sequence multiply.                 |
+| `complexity/nesting`             | function  | error, max 5    | Deepest stack of enclosing control-flow constructs                       |
+| `complexity/condition`           | condition | error, max 7    | Decision clauses in a single `if`/loop test, ternary or `&&` chain       |
+| `complexity/halstead-difficulty` | function  | off, max 30     | Halstead difficulty over the function's own tokens                       |
+| `size/file`                      | file      | error, max 800  | Source lines, ignoring blank and comment-only lines                      |
+| `size/function`                  | function  | error, max 120  | Source lines within the function                                         |
+| `size/statements`                | function  | error, max 60   | Executable statements the function owns                                  |
+| `size/parameters`                | function  | error, max 6    | Parameters, not counting a TypeScript `this` parameter                   |
 
 `qualint explain <rule>` prints the full definition of each one. The scoring
 rules are considered public behaviour and are pinned by the test fixtures; a
@@ -163,15 +186,15 @@ configured limit next to each, plus the step-by-step cognitive complexity
 ledger so you can see where a score comes from.
 
 ```text
-processOrder (42:1–119:2)
-  source lines               63  max 60
-  statements                 31  max 30
-  parameters                  4  max 5
-  cyclomatic complexity      12  max 10
-  cognitive complexity       18  max 15
-  NPath complexity          288  max 200
-  maximum nesting             4  max 4
-  maximum condition           5  max 5
+processOrder (42:1–172:2)
+  source lines              131  max 120
+  statements                 58  max 60
+  parameters                  4  max 6
+  cyclomatic complexity      19  max 20
+  cognitive complexity       38  max 30
+  NPath complexity          768  max 1000
+  maximum nesting             6  max 5
+  maximum condition           5  max 7
   Halstead difficulty      17.4  off
   Halstead volume         812.7
   Halstead effort       14146.9

@@ -17,7 +17,9 @@ const COMPLEX = `export function process(order, opts) {
       if (order.c) {
         if (order.d) {
           if (order.e) {
-            return 1;
+            if (order.f) {
+              return 1;
+            }
           }
         }
       }
@@ -72,7 +74,7 @@ describe('cli', () => {
     assert.equal(result.code, 1);
     assert.equal(result.stdout, `src/complex.ts
 
-  6:11  error  Nesting depth is 5; maximum is 4  complexity/nesting
+  7:13  error  Nesting depth is 6; maximum is 5  complexity/nesting
 
 ✖ 1 problem (1 error, 0 warnings)
 `);
@@ -99,7 +101,7 @@ describe('cli', () => {
       verbose.stdout,
       `src/complex.ts
 
-  6:11  error  Nesting depth is 5; maximum is 4  complexity/nesting
+  7:13  error  Nesting depth is 6; maximum is 5  complexity/nesting
 
 ✔ src/simple.ts
 
@@ -150,7 +152,7 @@ overrides:
     });
     const result = await cli(dir);
     assert.equal(result.code, 0, result.stdout);
-    assert.match(result.stdout, /^src\/a\.ts\n\n  6:11  warning  Nesting depth is 5; maximum is 2  complexity\/nesting\n/);
+    assert.match(result.stdout, /^src\/a\.ts\n\n  7:13  warning  Nesting depth is 6; maximum is 2  complexity\/nesting\n/);
     assert.doesNotMatch(result.stdout, /a\.test\.ts|legacy|other/);
     assert.match(result.stdout, /✖ 1 problem \(0 errors, 1 warning\)/);
 
@@ -190,16 +192,16 @@ overrides:
     assert.deepEqual(document.summary, { analyzedFiles: 1, failedFiles: 1, errors: 1, warnings: 0 });
     assert.deepEqual(document.files.map((file: { path: string }) => file.path), ['src/broken.ts', 'src/complex.ts']);
     assert.match(document.files[0].error.message, /^Parse error/);
-    assert.deepEqual(document.files[1].metrics, { physicalLines: 14, sourceLines: 14, blankLines: 0, commentOnlyLines: 0 });
+    assert.deepEqual(document.files[1].metrics, { physicalLines: 16, sourceLines: 16, blankLines: 0, commentOnlyLines: 0 });
     assert.deepEqual(document.files[1].diagnostics, [
       {
         rule: 'complexity/nesting',
         severity: 'error',
-        message: 'Nesting depth is 5; maximum is 4',
-        value: 5,
-        maximum: 4,
+        message: 'Nesting depth is 6; maximum is 5',
+        value: 6,
+        maximum: 5,
         entity: 'process',
-        location: { line: 6, column: 11 },
+        location: { line: 7, column: 13 },
       },
     ]);
   });
@@ -208,12 +210,12 @@ overrides:
     const dir = await fixture({ 'src/complex.ts': COMPLEX });
     const text = await cli(dir, 'inspect', 'src/complex.ts');
     assert.equal(text.code, 0);
-    assert.match(text.stdout, /^src\/complex\.ts\n  physical lines +14\n  source lines +14  max 500\n/);
-    assert.match(text.stdout, /\nprocess \(1:8–14:2\)\n/);
-    assert.match(text.stdout, /  cyclomatic complexity +6  max 10\n/);
-    assert.match(text.stdout, /  cognitive complexity +15  max 15\n/);
-    assert.match(text.stdout, /  NPath complexity +6  max 200\n/);
-    assert.match(text.stdout, /  maximum nesting +5  max 4\n/);
+    assert.match(text.stdout, /^src\/complex\.ts\n  physical lines +16\n  source lines +16  max 800\n/);
+    assert.match(text.stdout, /\nprocess \(1:8–16:2\)\n/);
+    assert.match(text.stdout, /  cyclomatic complexity +7  max 20\n/);
+    assert.match(text.stdout, /  cognitive complexity +21  max 30\n/);
+    assert.match(text.stdout, /  NPath complexity +7  max 1000\n/);
+    assert.match(text.stdout, /  maximum nesting +6  max 5\n/);
     assert.match(text.stdout, /  Halstead difficulty +[\d.]+  off\n/);
     assert.match(text.stdout, /cognitive contributions\n    2:3 +if +\+1 +\= 1\n    3:5 +if +\+1 \+1 nesting +\= 3\n/);
 
@@ -221,8 +223,8 @@ overrides:
     const document = JSON.parse(json.stdout);
     const fn = document.files[0].metrics.functions[0];
     assert.equal(fn.name, 'process');
-    assert.equal(fn.npathComplexity, '6');
-    assert.equal(fn.cognitiveContributions.length, 5);
+    assert.equal(fn.npathComplexity, '7');
+    assert.equal(fn.cognitiveContributions.length, 6);
     assert.equal(document.files[0].diagnostics.length, 1);
   });
 
@@ -231,7 +233,7 @@ overrides:
     const known = await cli(dir, 'explain', 'complexity/cognitive');
     assert.equal(known.code, 0);
     assert.match(known.stdout, /^complexity\/cognitive\n/);
-    assert.match(known.stdout, /Default: error, maximum 15/);
+    assert.match(known.stdout, /Default: error, maximum 30\nPresets: strict 15, standard 30, relaxed 50/);
     const list = await cli(dir, 'explain');
     assert.equal(list.code, 0);
     assert.match(list.stdout, /size\/parameters/);

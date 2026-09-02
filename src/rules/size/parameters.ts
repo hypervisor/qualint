@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const parametersRule: RuleDefinition = {
   id: 'size/parameters',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 5,
+  defaultMax: presetMax('size/parameters', DEFAULT_PRESET),
   fractional: false,
   summary: 'Number of syntactic parameters a function declares.',
   explanation: `Each syntactic parameter counts once. Destructured, defaulted and rest

@@ -1,10 +1,11 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 
 export const nestingRule: RuleDefinition = {
   id: 'complexity/nesting',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 4,
+  defaultMax: presetMax('complexity/nesting', DEFAULT_PRESET),
   fractional: false,
   summary: 'Greatest number of simultaneously enclosing control-flow constructs in a function.',
   explanation: `Depth increases by one while the controlled body of each of these is visited:

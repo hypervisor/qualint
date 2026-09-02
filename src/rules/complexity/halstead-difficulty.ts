@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const halsteadDifficultyRule: RuleDefinition = {
   id: 'complexity/halstead-difficulty',
   scope: 'function',
   defaultSeverity: 'off',
-  defaultMax: 20,
+  defaultMax: presetMax('complexity/halstead-difficulty', DEFAULT_PRESET),
   fractional: true,
   summary: 'Halstead difficulty: (distinct operators / 2) x (total operands / distinct operands).',
   explanation: `Halstead metrics are computed from the tokens a function owns, excluding

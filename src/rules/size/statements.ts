@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const statementsRule: RuleDefinition = {
   id: 'size/statements',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 30,
+  defaultMax: presetMax('size/statements', DEFAULT_PRESET),
   fractional: false,
   summary: 'Executable statements owned by a function.',
   explanation: `Counts executable ESTree statement nodes owned by the function, at any nesting

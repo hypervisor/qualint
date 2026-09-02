@@ -1,11 +1,12 @@
 import type { ConditionGroup } from '../../types.ts';
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { DiagnosticDraft, RuleDefinition } from '../registry.ts';
 
 export const conditionRule: RuleDefinition = {
   id: 'complexity/condition',
   scope: 'condition',
   defaultSeverity: 'error',
-  defaultMax: 5,
+  defaultMax: presetMax('complexity/condition', DEFAULT_PRESET),
   fractional: false,
   summary: 'Number of atomic decision clauses in a single condition or short-circuit expression.',
   explanation: `A condition group is one of:

@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const cognitiveRule: RuleDefinition = {
   id: 'complexity/cognitive',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 15,
+  defaultMax: presetMax('complexity/cognitive', DEFAULT_PRESET),
   fractional: false,
   summary: 'How hard a function is to follow; nested control flow costs more than flat control flow.',
   explanation: `A control-flow nesting level starts at 0. The following add 1 + current nesting

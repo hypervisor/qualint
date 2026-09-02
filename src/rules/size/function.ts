@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const functionSizeRule: RuleDefinition = {
   id: 'size/function',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 60,
+  defaultMax: presetMax('size/function', DEFAULT_PRESET),
   fractional: false,
   summary: 'Source lines in a function, using the same definition as size/file.',
   explanation: `Counts the physical lines intersecting the function's range that contain code

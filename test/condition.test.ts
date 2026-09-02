@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { runRules } from '../src/rules/registry.ts';
 import { defaultRuleSettings } from '../src/config/defaults.ts';
+import { DEFAULT_PRESET } from '../src/config/presets.ts';
 import type { ResolvedRules } from '../src/types.ts';
 import { body, bodyTsx, metricsOf } from './helpers.ts';
 
@@ -41,16 +42,18 @@ describe('complexity/condition', () => {
   });
 
   it('reports every group over the limit, pointing at the group', () => {
-    const metrics = metricsOf('function f(a, b, c, d, e, g) {\n  if (a && b && c && d && e && g) {}\n  const v = a || b || c || d || e || g;\n  if (a) {}\n}\n');
-    const rules: ResolvedRules = new Map([...defaultRuleSettings()].flatMap(([id, s]) => (s === 'off' ? [] : [[id, s] as const])));
+    const metrics = metricsOf(
+      'function f(a, b, c, d, e, g, h, i) {\n  if (a && b && c && d && e && g && h && i) {}\n  const v = a || b || c || d || e || g || h || i;\n  if (a) {}\n}\n',
+    );
+    const rules: ResolvedRules = new Map([...defaultRuleSettings(DEFAULT_PRESET)].flatMap(([id, s]) => (s === 'off' ? [] : [[id, s] as const])));
     const diagnostics = runRules(metrics, rules).filter((d) => d.rule === 'complexity/condition');
     assert.deepEqual(
       diagnostics.map((d) => [d.location.line, d.location.column, d.value, d.entity, d.message]),
       [
-        [2, 7, 6, 'f', 'Condition in `f` has complexity 6; maximum is 5'],
-        [3, 13, 6, 'f', 'Condition in `f` has complexity 6; maximum is 5'],
+        [2, 7, 8, 'f', 'Condition in `f` has complexity 8; maximum is 7'],
+        [3, 13, 8, 'f', 'Condition in `f` has complexity 8; maximum is 7'],
       ],
     );
-    assert.equal(metrics.functions[0]!.maximumConditionComplexity, 6);
+    assert.equal(metrics.functions[0]!.maximumConditionComplexity, 8);
   });
 });

@@ -1,3 +1,4 @@
+import { PRESETS } from '../../config/presets.ts';
 import { RULES, isRuleId } from '../../rules/registry.ts';
 import type { CliArguments } from '../args.ts';
 import { type CliContext, EXIT_FAILURE, EXIT_OK, writeLine } from '../context.ts';
@@ -19,6 +20,8 @@ export function runExplain(args: CliArguments, context: CliContext): number {
   }
   const rule = RULES.get(ruleId)!;
   const defaults = rule.defaultSeverity === 'off' ? `off; maximum ${rule.defaultMax} when enabled` : `${rule.defaultSeverity}, maximum ${rule.defaultMax}`;
-  writeLine(context.stdout, `${rule.id}\n\n${rule.summary}\n\nScope: ${rule.scope}\nDefault: ${defaults}\n\n${rule.explanation}`);
+  const presets = PRESETS[ruleId];
+  const presetLine = `Presets: strict ${presets.strict}, standard ${presets.standard}, relaxed ${presets.relaxed}`;
+  writeLine(context.stdout, `${rule.id}\n\n${rule.summary}\n\nScope: ${rule.scope}\nDefault: ${defaults}\n${presetLine}\n\n${rule.explanation}`);
   return EXIT_OK;
 }

@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 import type { ResolvedRules, RuleId } from '../types.ts';
 import { matchesAnyGlob, toPosixPath } from '../files/glob.ts';
 import { CONFIG_FILE_NAMES, DEFAULT_EXCLUDE, defaultRuleSettings, type RuleSetting } from './defaults.ts';
+import { DEFAULT_PRESET } from './presets.ts';
 import { ConfigError, type QualintConfig, validateConfig } from './schema.ts';
 
 export interface LoadedConfig {
@@ -29,7 +30,7 @@ export interface LoadConfigOptions {
 export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConfig> {
   const configPath = options.explicitPath !== undefined ? path.resolve(options.cwd, options.explicitPath) : await findConfigFile(options.cwd);
   if (configPath === null) {
-    const config: QualintConfig = { include: null, exclude: null, rules: new Map(), overrides: [] };
+    const config: QualintConfig = { preset: DEFAULT_PRESET, include: null, exclude: null, rules: new Map(), overrides: [] };
     return { config, configPath: null, baseDir: options.cwd, exclude: DEFAULT_EXCLUDE };
   }
 
@@ -80,11 +81,12 @@ async function findConfigFile(startDir: string): Promise<string | null> {
 }
 
 /**
- * Resolves the rule set for one file: built-in defaults, then top-level rules,
- * then every matching override in order. Each layer replaces whole rule values.
+ * Resolves the rule set for one file: the preset's defaults, then top-level
+ * rules, then every matching override in order. Each layer replaces whole rule
+ * values.
  */
 export function resolveRulesForFile(loaded: LoadedConfig, absolutePath: string): ResolvedRules {
-  const settings = defaultRuleSettings();
+  const settings = defaultRuleSettings(loaded.config.preset);
   applyLayer(settings, loaded.config.rules);
   const relative = toPosixPath(path.relative(loaded.baseDir, absolutePath));
   for (const override of loaded.config.overrides) {

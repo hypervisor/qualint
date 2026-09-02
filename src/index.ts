@@ -10,6 +10,7 @@ export { run } from './cli/index.ts';
 export { loadConfig, resolveRulesForFile } from './config/load-config.ts';
 export { ConfigError, validateConfig } from './config/schema.ts';
 export { DEFAULT_EXCLUDE } from './config/defaults.ts';
+export { PRESETS, PRESET_NAMES, DEFAULT_PRESET, type PresetName } from './config/presets.ts';
 export { analyzeFile } from './analysis/analyze-file.ts';
 export { parseSource, ParseFailure, SUPPORTED_EXTENSIONS } from './parser/parse-file.ts';
 export { RULES, RULE_IDS, runRules } from './rules/registry.ts';

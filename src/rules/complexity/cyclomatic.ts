@@ -1,3 +1,4 @@
+import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
 import { functionDiagnostic } from '../shared.ts';
 
@@ -5,7 +6,7 @@ export const cyclomaticRule: RuleDefinition = {
   id: 'complexity/cyclomatic',
   scope: 'function',
   defaultSeverity: 'error',
-  defaultMax: 10,
+  defaultMax: presetMax('complexity/cyclomatic', DEFAULT_PRESET),
   fractional: false,
   summary: 'Number of linearly independent paths through a function.',
   explanation: `Each function starts at 1. One is added for every runtime decision point the
