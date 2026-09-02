@@ -241,6 +241,34 @@ overrides:
     assert.equal(unknown.code, 2);
   });
 
+  it('writes a starter configuration with init', async () => {
+    const dir = await fixture({ 'src/complex.ts': COMPLEX });
+    const first = await cli(dir, 'init', '--preset', 'strict');
+    assert.equal(first.code, 0);
+    assert.equal(first.stdout, '✔ wrote .qualintrc.yaml (strict preset)\n');
+    const written = await fs.readFile(path.join(dir, '.qualintrc.yaml'), 'utf8');
+    assert.match(written, /^preset: strict$/m);
+    assert.match(written, /^#   complexity\/cyclomatic: \[error, \{ max: 10 \}\]$/m);
+    assert.match(written, /^#   complexity\/halstead-difficulty: off$/m);
+
+    // The generated file loads, and its preset is in effect.
+    const run = await cli(dir);
+    assert.equal(run.code, 1);
+    assert.match(run.stdout, /Nesting depth is 6; maximum is 4/);
+
+    const second = await cli(dir, 'init');
+    assert.equal(second.code, 2);
+    assert.match(second.stderr, /\.qualintrc\.yaml already exists; pass --force/);
+
+    const forced = await cli(dir, 'init', '--force');
+    assert.equal(forced.code, 0);
+    assert.match(await fs.readFile(path.join(dir, '.qualintrc.yaml'), 'utf8'), /^preset: standard$/m);
+
+    const bad = await cli(dir, 'init', '--preset', 'lenient');
+    assert.equal(bad.code, 2);
+    assert.match(bad.stderr, /Unknown preset "lenient"/);
+  });
+
   it('rejects bad arguments with exit 2 and usage', async () => {
     const dir = await fixture({});
     const result = await cli(dir, '--format', 'xml');

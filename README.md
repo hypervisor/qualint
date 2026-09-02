@@ -60,6 +60,7 @@ qualint --verbose                        # also list clean files and the config 
 qualint --config ./config/.qualintrc.yaml
 qualint inspect src/orders/process-order.ts   # every metric for a file
 qualint explain complexity/cognitive          # how a rule is calculated
+qualint init --preset relaxed                 # write a starter .qualintrc.yaml
 ```
 
 Supported extensions: `.js .jsx .ts .tsx .mjs .cjs .mts .cts`. Directories are
@@ -80,6 +81,11 @@ A syntax error in one file doesn't hide the results for the others, but it does
 force exit code 2 so it can't be mistaken for a clean run.
 
 ## Configuration
+
+`qualint init` writes a commented `.qualintrc.yaml` into the current directory
+with every rule listed at the chosen preset's value, so you can see what you're
+getting and tweak from there. It won't overwrite an existing file unless you
+pass `--force`.
 
 qualint looks for `.qualintrc.yaml` (also `.yml` or `.json`), starting in the
 current directory and walking up. Patterns are relative to the directory the

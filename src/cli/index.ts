@@ -5,6 +5,7 @@ import { ConfigError } from '../config/schema.ts';
 import { type CliArguments, parseCliArguments, USAGE, UsageError } from './args.ts';
 import { runAnalyze } from './commands/analyze.ts';
 import { runExplain } from './commands/explain.ts';
+import { runInit } from './commands/init.ts';
 import { runInspect } from './commands/inspect.ts';
 import { type CliContext, EXIT_FAILURE, EXIT_OK, writeLine } from './context.ts';
 
@@ -46,6 +47,9 @@ function withProcessDefaults(options: RunOptions): Required<RunOptions> {
 async function dispatch(args: CliArguments, context: CliContext): Promise<number> {
   if (args.command === 'explain') {
     return runExplain(args, context);
+  }
+  if (args.command === 'init') {
+    return runInit(args, context);
   }
   const loaded = await loadOrReport(args, context);
   if (loaded === null) {

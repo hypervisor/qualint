@@ -65,7 +65,10 @@ qualint inspect src/orders/process-order.ts
 qualint explain complexity/cognitive
 
 # Use a specific configuration file
-qualint --config ./config/.qualintrc.json
+qualint --config ./config/.qualintrc.yaml
+
+# Write a starter configuration for a preset
+qualint init --preset strict
 ```
 
 Directories are traversed recursively. Explicit paths are still filtered by supported extensions and configured exclusions. Shell-expanded globs work as ordinary positional arguments; Qualint does not need a separate glob expression language on the command line.

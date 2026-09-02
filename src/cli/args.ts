@@ -1,7 +1,8 @@
 import { parseArgs } from 'node:util';
+import { DEFAULT_PRESET, isPresetName, PRESET_NAMES, type PresetName } from '../config/presets.ts';
 
 export type OutputFormat = 'stylish' | 'json';
-export type Command = 'analyze' | 'inspect' | 'explain';
+export type Command = 'analyze' | 'inspect' | 'explain' | 'init';
 
 export interface CliArguments {
   command: Command;
@@ -11,6 +12,10 @@ export interface CliArguments {
   maxWarnings: number | null;
   color: boolean | undefined;
   verbose: boolean;
+  /** init only: preset to write. */
+  preset: PresetName;
+  /** init only: overwrite an existing configuration file. */
+  force: boolean;
   help: boolean;
   version: boolean;
 }
@@ -25,6 +30,7 @@ export class UsageError extends Error {
 export const USAGE = `Usage: qualint [paths...] [options]
        qualint inspect <file> [options]
        qualint explain [rule]
+       qualint init [--preset strict|standard|relaxed] [--force]
 
 Analyzes JavaScript and TypeScript source files for structural quality problems:
 complexity, nesting, condition density and size. Only problems are printed; a
@@ -36,6 +42,8 @@ Options:
   --config <path>           Configuration file (default: nearest .qualintrc.json)
   --max-warnings <n>        Fail when more than n warnings are reported
   --verbose                 Also list clean files and the configuration in use
+  --preset <name>           Preset for init (default: standard)
+  --force                   Let init overwrite an existing configuration file
   --color / --no-color      Force ANSI colors on or off
   -h, --help                Show this help
   -v, --version             Show the version
@@ -55,6 +63,8 @@ export function parseCliArguments(argv: readonly string[]): CliArguments {
         'max-warnings': { type: 'string' },
         color: { type: 'boolean' },
         verbose: { type: 'boolean' },
+        preset: { type: 'string' },
+        force: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' },
       },
@@ -66,7 +76,7 @@ export function parseCliArguments(argv: readonly string[]): CliArguments {
   const values = parsed.values;
   const positionals = [...parsed.positionals];
   let command: Command = 'analyze';
-  if (positionals[0] === 'inspect' || positionals[0] === 'explain') {
+  if (positionals[0] === 'inspect' || positionals[0] === 'explain' || positionals[0] === 'init') {
     command = positionals.shift() as Command;
   }
 
@@ -78,6 +88,8 @@ export function parseCliArguments(argv: readonly string[]): CliArguments {
     maxWarnings: parseMaxWarnings(values['max-warnings']),
     color: values.color,
     verbose: values.verbose ?? false,
+    preset: parsePreset(values.preset),
+    force: values.force ?? false,
     help: values.help ?? false,
     version: values.version ?? false,
   };
@@ -89,6 +101,16 @@ function parseFormat(value: string | undefined): OutputFormat {
     throw new UsageError(`Unknown format "${format}"; expected "stylish" or "json"`);
   }
   return format;
+}
+
+function parsePreset(value: string | undefined): PresetName {
+  if (value === undefined) {
+    return DEFAULT_PRESET;
+  }
+  if (!isPresetName(value)) {
+    throw new UsageError(`Unknown preset "${value}"; expected one of ${PRESET_NAMES.join(', ')}`);
+  }
+  return value;
 }
 
 function parseMaxWarnings(value: string | undefined): number | null {
