@@ -1,0 +1,23 @@
+{
+  "include": ["src/**/*", "test/**/*", "scripts/**/*"],
+  "overrides": [
+    {
+      "files": ["src/analysis/**", "src/files/glob.ts", "src/config/schema.ts"],
+      "rules": {
+        "complexity/cyclomatic": ["error", { "max": 70 }],
+        "complexity/cognitive": ["error", { "max": 60 }],
+        "complexity/npath": ["error", { "max": 1000 }],
+        "complexity/condition": ["error", { "max": 8 }],
+        "size/function": ["error", { "max": 180 }],
+        "size/statements": ["error", { "max": 120 }]
+      }
+    },
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "size/function": "off",
+        "size/statements": ["error", { "max": 60 }]
+      }
+    }
+  ]
+}

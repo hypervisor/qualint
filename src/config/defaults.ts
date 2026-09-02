@@ -1,0 +1,33 @@
+import type { ResolvedRule, RuleId } from '../types.ts';
+import { RULES } from '../rules/registry.ts';
+
+export const CONFIG_FILE_NAME = '.qualintrc.json';
+
+/**
+ * Default exclusions. `node_modules` and hidden directories are additionally
+ * never traversed regardless of configuration.
+ */
+export const DEFAULT_EXCLUDE: readonly string[] = [
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/.*/**',
+  '**/*.generated.*',
+  '**/*.d.ts',
+  '**/*.d.mts',
+  '**/*.d.cts',
+];
+
+export type RuleSetting = ResolvedRule | 'off';
+
+export function defaultRuleSettings(): Map<RuleId, RuleSetting> {
+  const settings = new Map<RuleId, RuleSetting>();
+  for (const rule of RULES.values()) {
+    settings.set(
+      rule.id,
+      rule.defaultSeverity === 'off' ? 'off' : { severity: rule.defaultSeverity, options: { max: rule.defaultMax } },
+    );
+  }
+  return settings;
+}

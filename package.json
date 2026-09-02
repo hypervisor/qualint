@@ -1,0 +1,67 @@
+{
+  "name": "qualint",
+  "version": "0.1.0",
+  "description": "Deterministic code-quality gate for JavaScript and TypeScript: complexity, nesting, size and condition metrics with precise diagnostics.",
+  "license": "MIT",
+  "homepage": "https://github.com/hypervisor/qualint#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hypervisor/qualint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hypervisor/qualint/issues"
+  },
+  "type": "module",
+  "bin": {
+    "qualint": "./bin/qualint.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test --test-reporter=dot 'test/**/*.test.ts'",
+    "bench": "node scripts/bench.ts",
+    "prepack": "npm run build",
+    "check": "npm run typecheck && npm test && node bin/qualint.js",
+    "test:verbose": "node --test --test-reporter=spec 'test/**/*.test.ts'",
+    "prepublishOnly": "npm run check"
+  },
+  "keywords": [
+    "code-quality",
+    "complexity",
+    "cyclomatic",
+    "cognitive-complexity",
+    "npath",
+    "lint",
+    "typescript",
+    "javascript"
+  ],
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "^8.69.0",
+    "@typescript-eslint/visitor-keys": "^8.69.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.8.4 <6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^5.9.3"
+  }
+}
