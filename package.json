@@ -55,7 +55,8 @@
   ],
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.69.0",
-    "@typescript-eslint/visitor-keys": "^8.69.0"
+    "@typescript-eslint/visitor-keys": "^8.69.0",
+    "yaml": "^2.9.0"
   },
   "peerDependencies": {
     "typescript": ">=4.8.4 <6.1.0"

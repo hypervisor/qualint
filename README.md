@@ -57,7 +57,7 @@ qualint apps/api packages/shared         # several paths, shell globs work too
 qualint --format json                    # machine-readable output
 qualint --max-warnings 0                 # treat warnings as failures
 qualint --verbose                        # also list clean files and the config in use
-qualint --config ./config/.qualintrc.json
+qualint --config ./config/.qualintrc.yaml
 qualint inspect src/orders/process-order.ts   # every metric for a file
 qualint explain complexity/cognitive          # how a rule is calculated
 ```
@@ -81,40 +81,41 @@ force exit code 2 so it can't be mistaken for a clean run.
 
 ## Configuration
 
-qualint looks for `.qualintrc.json`, starting in the current directory and
-walking up. Patterns are relative to the directory the file lives in. With no
-file, the defaults below apply to every supported file under the current
-directory.
+qualint looks for `.qualintrc.yaml` (also `.yml` or `.json`), starting in the
+current directory and walking up. Patterns are relative to the directory the
+file lives in. With no file, the defaults below apply to every supported file
+under the current directory.
 
-```json
-{
-  "include": ["src/**/*", "apps/**/*", "packages/**/*"],
-  "exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/*.generated.*"],
-  "rules": {
-    "complexity/cyclomatic": ["error", { "max": 10 }],
-    "complexity/cognitive": ["error", { "max": 15 }],
-    "complexity/npath": ["error", { "max": 200 }],
-    "complexity/nesting": ["error", { "max": 4 }],
-    "complexity/condition": ["error", { "max": 5 }],
-    "complexity/halstead-difficulty": "off",
-    "size/file": ["error", { "max": 500 }],
-    "size/function": ["error", { "max": 60 }],
-    "size/statements": ["error", { "max": 30 }],
-    "size/parameters": ["error", { "max": 5 }]
-  },
-  "overrides": [
-    {
-      "files": ["**/*.test.*", "**/*.spec.*"],
-      "rules": {
-        "size/function": ["error", { "max": 100 }],
-        "size/file": "off"
-      }
-    }
-  ]
-}
+```yaml
+include:
+  - src/**/*
+  - apps/**/*
+  - packages/**/*
+exclude:
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/coverage/**'
+  - '**/*.generated.*'
+rules:
+  complexity/cyclomatic: [error, { max: 10 }]
+  complexity/cognitive: [error, { max: 15 }]
+  complexity/npath: [error, { max: 200 }]
+  complexity/nesting: [error, { max: 4 }]
+  complexity/condition: [error, { max: 5 }]
+  complexity/halstead-difficulty: off
+  size/file: [error, { max: 500 }]
+  size/function: [error, { max: 60 }]
+  size/statements: [error, { max: 30 }]
+  size/parameters: [error, { max: 5 }]
+overrides:
+  - files: ['**/*.test.*', '**/*.spec.*']
+    rules:
+      size/function: [error, { max: 100 }]
+      size/file: off
 ```
 
-A rule value is `"off"`, `"warn"`, `"error"`, or `[severity, { "max": n }]`.
+A rule value is `off`, `warn`, `error`, or `[severity, { max: n }]`.
 A bare severity keeps the default limit. Overrides are applied in order and
 each one replaces the whole value for a rule, so `["error"]` in an override
 resets `max` to the default rather than keeping the top-level one.

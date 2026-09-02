@@ -106,7 +106,7 @@ Warnings do not change the exit code unless `--max-warnings <n>` is supplied and
 
 ## 5. Configuration
 
-The canonical v1 configuration file is `.qualintrc.json`. Qualint searches upward from the current working directory and uses the first file found. Configuration lookup stops at the filesystem root.
+The canonical v1 configuration file is `.qualintrc.yaml` (`.qualintrc.yml` and `.qualintrc.json` are also recognized; JSON is a subset of YAML). Qualint searches upward from the current working directory and uses the first file found, checking the YAML names before JSON in each directory. Configuration lookup stops at the filesystem root. The example below is shown as JSON for compactness; the YAML form is equivalent.
 
 ```json
 {

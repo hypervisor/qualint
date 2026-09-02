@@ -88,10 +88,35 @@ describe('config loading and resolution', () => {
     assert.deepEqual(elsewhere.get('complexity/nesting'), { severity: 'error', options: { max: 4 } });
   });
 
+  it('reads YAML with comments and prefers it over JSON in the same directory', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qualint-'));
+    await fs.writeFile(
+      path.join(dir, '.qualintrc.yaml'),
+      ['# project limits', 'include:', '  - src/**/*', 'rules:', '  size/function: [warn, { max: 80 }]  # tests are long', '  size/file: off', ''].join('\n'),
+    );
+    await fs.writeFile(path.join(dir, '.qualintrc.json'), JSON.stringify({ rules: { 'size/file': 'error' } }));
+    const loaded = await loadConfig({ cwd: dir });
+    assert.equal(loaded.configPath, path.join(dir, '.qualintrc.yaml'));
+    assert.deepEqual(loaded.config.include, ['src/**/*']);
+    const rules = resolveRulesForFile(loaded, path.join(dir, 'src', 'a.ts'));
+    assert.deepEqual(rules.get('size/function'), { severity: 'warn', options: { max: 80 } });
+    assert.equal(rules.has('size/file'), false);
+  });
+
+  it('treats an empty YAML file as an empty configuration', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qualint-'));
+    await fs.writeFile(path.join(dir, '.qualintrc.yml'), '# nothing yet\n');
+    const loaded = await loadConfig({ cwd: dir });
+    assert.equal(loaded.configPath, path.join(dir, '.qualintrc.yml'));
+    assert.equal(loaded.config.include, null);
+  });
+
   it('reports unreadable and malformed files as configuration errors', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qualint-'));
-    await assert.rejects(loadConfig({ cwd: dir, explicitPath: 'missing.json' }), ConfigError);
+    await assert.rejects(loadConfig({ cwd: dir, explicitPath: 'missing.yaml' }), ConfigError);
+    await fs.writeFile(path.join(dir, 'bad.yaml'), 'rules:\n  - [oops\n');
+    await assert.rejects(loadConfig({ cwd: dir, explicitPath: 'bad.yaml' }), /not valid YAML: .* at line 3, column 1/);
     await fs.writeFile(path.join(dir, 'bad.json'), '{ not json');
-    await assert.rejects(loadConfig({ cwd: dir, explicitPath: 'bad.json' }), /not valid JSON/);
+    await assert.rejects(loadConfig({ cwd: dir, explicitPath: 'bad.json' }), /not valid YAML/);
   });
 });

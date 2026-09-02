@@ -87,14 +87,14 @@ describe('cli', () => {
   });
 
   it('lists clean files and the configuration only in verbose mode', async () => {
-    const dir = await fixture({ 'src/simple.ts': SIMPLE, 'src/complex.ts': COMPLEX, '.qualintrc.json': '{}' });
+    const dir = await fixture({ 'src/simple.ts': SIMPLE, 'src/complex.ts': COMPLEX, '.qualintrc.yaml': '# defaults\n' });
     const normal = await cli(dir);
     assert.doesNotMatch(normal.stdout, /simple\.ts/);
     assert.equal(normal.stderr, '');
 
     const verbose = await cli(dir, '--verbose');
     assert.equal(verbose.code, 1);
-    assert.equal(verbose.stderr, 'qualint: configuration: .qualintrc.json\n');
+    assert.equal(verbose.stderr, 'qualint: configuration: .qualintrc.yaml\n');
     assert.equal(
       verbose.stdout,
       `src/complex.ts
@@ -131,14 +131,18 @@ describe('cli', () => {
     assert.match(result.stderr, /path not found: nope\.ts/);
   });
 
-  it('applies include, exclude and overrides from .qualintrc.json', async () => {
+  it('applies include, exclude and overrides from .qualintrc.yaml', async () => {
     const dir = await fixture({
-      '.qualintrc.json': JSON.stringify({
-        include: ['src/**/*'],
-        exclude: ['**/legacy/**'],
-        rules: { 'complexity/nesting': ['warn', { max: 2 }] },
-        overrides: [{ files: ['**/*.test.*'], rules: { 'complexity/nesting': 'off' } }],
-      }),
+      '.qualintrc.yaml': `
+include: [src/**/*]
+exclude: ['**/legacy/**']
+rules:
+  complexity/nesting: [warn, { max: 2 }]
+overrides:
+  - files: ['**/*.test.*']
+    rules:
+      complexity/nesting: off
+`,
       'src/a.ts': COMPLEX,
       'src/a.test.ts': COMPLEX,
       'src/legacy/old.ts': COMPLEX,
@@ -165,7 +169,7 @@ describe('cli', () => {
     const badJson = await fixture({ '.qualintrc.json': '{ "rules": ', 'a.ts': SIMPLE });
     const second = await cli(badJson);
     assert.equal(second.code, 2);
-    assert.match(second.stderr, /not valid JSON/);
+    assert.match(second.stderr, /not valid YAML/);
   });
 
   it('reports parse errors with exit 2 while still reporting other files', async () => {

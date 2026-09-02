@@ -1,7 +1,8 @@
 import type { ResolvedRule, RuleId } from '../types.ts';
 import { RULES } from '../rules/registry.ts';
 
-export const CONFIG_FILE_NAME = '.qualintrc.json';
+/** Searched in this order within each directory; YAML is canonical, JSON still works. */
+export const CONFIG_FILE_NAMES: readonly string[] = ['.qualintrc.yaml', '.qualintrc.yml', '.qualintrc.json'];
 
 /**
  * Default exclusions. `node_modules` and hidden directories are additionally

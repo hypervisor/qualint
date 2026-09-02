@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import type { ResolvedRules, RuleId } from '../types.ts';
 import { matchesAnyGlob, toPosixPath } from '../files/glob.ts';
-import { CONFIG_FILE_NAME, DEFAULT_EXCLUDE, defaultRuleSettings, type RuleSetting } from './defaults.ts';
+import { CONFIG_FILE_NAMES, DEFAULT_EXCLUDE, defaultRuleSettings, type RuleSetting } from './defaults.ts';
 import { ConfigError, type QualintConfig, validateConfig } from './schema.ts';
 
 export interface LoadedConfig {
@@ -21,8 +22,9 @@ export interface LoadConfigOptions {
 }
 
 /**
- * Loads `.qualintrc.json` by searching upward from `cwd`, or the explicit
- * `--config` file. Without a file, built-in defaults apply relative to `cwd`.
+ * Loads `.qualintrc.yaml` (or `.yml`, or `.json`) by searching upward from
+ * `cwd`, or the explicit `--config` file. Without a file, built-in defaults
+ * apply relative to `cwd`. JSON is a subset of YAML, so one parser covers both.
  */
 export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConfig> {
   const configPath = options.explicitPath !== undefined ? path.resolve(options.cwd, options.explicitPath) : await findConfigFile(options.cwd);
@@ -39,9 +41,9 @@ export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConf
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(text);
+    raw = parseYaml(text) ?? {};
   } catch (error) {
-    throw new ConfigError(`Configuration file ${configPath} is not valid JSON: ${describe(error)}`);
+    throw new ConfigError(`Configuration file ${configPath} is not valid YAML: ${firstLine(describe(error))}`);
   }
   let config: QualintConfig;
   try {
@@ -63,14 +65,11 @@ export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConf
 async function findConfigFile(startDir: string): Promise<string | null> {
   let current = path.resolve(startDir);
   for (;;) {
-    const candidate = path.join(current, CONFIG_FILE_NAME);
-    try {
-      const stat = await fs.stat(candidate);
-      if (stat.isFile()) {
+    for (const name of CONFIG_FILE_NAMES) {
+      const candidate = path.join(current, name);
+      if (await isFile(candidate)) {
         return candidate;
       }
-    } catch {
-      // keep searching upward
     }
     const parent = path.dirname(current);
     if (parent === current) {
@@ -106,6 +105,18 @@ function applyLayer(target: Map<RuleId, RuleSetting>, layer: ReadonlyMap<RuleId,
   for (const [id, setting] of layer) {
     target.set(id, setting);
   }
+}
+
+async function isFile(candidate: string): Promise<boolean> {
+  try {
+    return (await fs.stat(candidate)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function firstLine(text: string): string {
+  return text.split('\n')[0] ?? text;
 }
 
 function describe(error: unknown): string {
