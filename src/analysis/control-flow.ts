@@ -1,5 +1,5 @@
 import type { TSESTree } from '@typescript-eslint/typescript-estree';
-import type { CognitiveContribution, ConditionGroup } from '../types.ts';
+import type { CognitiveContribution, ConditionGroup, NestingStep } from '../types.ts';
 import {
   childrenOf,
   entityNodeOf,
@@ -18,11 +18,14 @@ import {
  */
 export interface FlowAccumulator {
   cyclomatic: number;
+  /** Decision points by kind, so a score can be explained without a second pass. */
+  decisions: Map<string, number>;
   cognitive: number;
   contributions: CognitiveContribution[];
   statements: number;
   maxDepth: number;
   maxDepthNode: Node | null;
+  maxDepthPath: NestingStep[];
   conditions: ConditionGroup[];
 }
 
@@ -40,14 +43,44 @@ interface ConditionGroupState {
   operators: number;
 }
 
+/** Name for a construct that adds a nesting level, or null when it adds none. */
+function nestingLabel(node: Node): string | null {
+  switch (node.type) {
+    case 'IfStatement':
+      return 'if';
+    case 'ForStatement':
+      return 'for';
+    case 'ForInStatement':
+      return 'for-in';
+    case 'ForOfStatement':
+      return 'for-of';
+    case 'WhileStatement':
+      return 'while';
+    case 'DoWhileStatement':
+      return 'do-while';
+    case 'SwitchStatement':
+      return 'switch';
+    case 'TryStatement':
+      return 'try';
+    case 'CatchClause':
+      return 'catch';
+    case 'ConditionalExpression':
+      return 'ternary';
+    default:
+      return null;
+  }
+}
+
 function newAccumulator(): FlowAccumulator {
   return {
     cyclomatic: 1,
+    decisions: new Map(),
     cognitive: 0,
     contributions: [],
     statements: 0,
     maxDepth: 0,
     maxDepthNode: null,
+    maxDepthPath: [],
     conditions: [],
   };
 }
@@ -121,7 +154,7 @@ export class ControlFlowWalker {
         this.visitChild(node.discriminant, node, nesting, depth);
         for (const switchCase of node.cases) {
           if (switchCase.test !== null) {
-            this.flow.cyclomatic++;
+            this.addDecision('case');
             this.visitChild(switchCase.test, switchCase, nesting, depth + 1);
           }
           for (const statement of switchCase.consequent) {
@@ -134,7 +167,7 @@ export class ControlFlowWalker {
         this.visitChild(node.block, node, nesting, depth + 1);
         if (node.handler !== null) {
           const handler = node.handler;
-          this.flow.cyclomatic++;
+          this.addDecision('catch');
           this.addCognitive(handler, 'catch', 1, nesting);
           if (handler.param !== null) {
             this.visitChild(handler.param, handler, nesting, depth + 1);
@@ -146,7 +179,7 @@ export class ControlFlowWalker {
         }
         return;
       case 'ConditionalExpression': {
-        this.flow.cyclomatic++;
+        this.addDecision('ternary');
         this.enterConstruct(node, 'conditional', nesting, depth);
         const opened = this.openGroupIfNone(node, 0);
         this.group!.operators++;
@@ -159,7 +192,7 @@ export class ControlFlowWalker {
         return;
       }
       case 'LogicalExpression': {
-        this.flow.cyclomatic++;
+        this.addDecision('logical');
         const continuesSequence = parent.type === 'LogicalExpression' && parent.operator === node.operator;
         if (!continuesSequence) {
           this.addCognitive(node, node.operator, 1, 0);
@@ -175,17 +208,17 @@ export class ControlFlowWalker {
       }
       case 'AssignmentExpression':
         if (isLogicalAssignment(node)) {
-          this.flow.cyclomatic++;
+          this.addDecision('logical');
         }
         break;
       case 'AssignmentPattern':
-        this.flow.cyclomatic++;
+        this.addDecision('default value');
         break;
       case 'ChainExpression':
         // One decision for the whole chain. `a?.b?.c` short-circuits to the same
         // place however many links it has, and counting per link inflated
         // idiomatic TypeScript badly enough to swamp real branching.
-        this.flow.cyclomatic++;
+        this.addDecision('optional chain');
         break;
       case 'BreakStatement':
       case 'ContinueStatement':
@@ -230,7 +263,7 @@ export class ControlFlowWalker {
   }
 
   private visitIf(node: TSESTree.IfStatement, nesting: number, depth: number, isElseIf: boolean, chainDepth: number): void {
-    this.flow.cyclomatic++;
+    this.addDecision('if');
     if (isElseIf) {
       this.addCognitive(node, 'else if', 1, 0);
     } else {
@@ -282,8 +315,14 @@ export class ControlFlowWalker {
 
   /** Loops are decision points as well as structural constructs. */
   private enterLoop(node: Node, construct: string, nesting: number, depth: number): void {
-    this.flow.cyclomatic++;
+    this.addDecision('loop');
     this.enterConstruct(node, construct, nesting, depth);
+  }
+
+  /** Records one decision point, both in the total and in the per-kind breakdown. */
+  private addDecision(kind: string): void {
+    this.flow.cyclomatic++;
+    this.flow.decisions.set(kind, (this.flow.decisions.get(kind) ?? 0) + 1);
   }
 
   private enterDepth(node: Node, depth: number): void {
@@ -291,7 +330,33 @@ export class ControlFlowWalker {
     if (inner > this.flow.maxDepth) {
       this.flow.maxDepth = inner;
       this.flow.maxDepthNode = node;
+      this.flow.maxDepthPath = this.nestingPathTo(node);
     }
+  }
+
+  /**
+   * The chain of control-flow constructs enclosing `node`, taken from the live
+   * ancestor stack and stopping at the function that owns them. Recomputed only
+   * when a new maximum depth is reached, which is rare.
+   */
+  private nestingPathTo(node: Node): NestingStep[] {
+    const steps: NestingStep[] = [];
+    for (let index = this.ancestors.length - 1; index >= 0; index--) {
+      const ancestor = this.ancestors[index]!;
+      if (isFunctionNode(ancestor)) {
+        break;
+      }
+      const label = nestingLabel(ancestor);
+      if (label !== null) {
+        steps.push({ construct: label, location: positionOf(ancestor.loc.start) });
+      }
+    }
+    steps.reverse();
+    const own = nestingLabel(node);
+    if (own !== null) {
+      steps.push({ construct: own, location: positionOf(node.loc.start) });
+    }
+    return steps;
   }
 
   private addCognitive(node: Node, construct: string, base: number, nesting: number): void {

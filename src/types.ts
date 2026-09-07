@@ -26,6 +26,18 @@ export interface CognitiveContribution {
   total: number;
 }
 
+/** How many decision points of each kind a function owns, for explaining a score. */
+export interface DecisionCount {
+  kind: string;
+  count: number;
+}
+
+/** One step of the construct chain leading to a function's deepest point. */
+export interface NestingStep {
+  construct: string;
+  location: SourcePosition;
+}
+
 /** One outermost condition group (an `if` test, a ternary, a value-position `&&` chain, ...). */
 export interface ConditionGroup {
   location: SourcePosition;
@@ -45,6 +57,10 @@ export interface FunctionMetrics {
   maximumNestingDepth: number;
   /** Location of the construct that sits at the maximum depth; null when depth is 0. */
   maximumNestingLocation: SourcePosition | null;
+  /** Enclosing constructs from the function body down to the deepest point. */
+  maximumNestingPath: NestingStep[];
+  /** Decision points by kind, most frequent first. */
+  decisions: DecisionCount[];
   maximumConditionComplexity: number;
   conditions: ConditionGroup[];
 }
@@ -81,6 +97,8 @@ export interface Diagnostic {
   maximum: number;
   entity: string | null;
   location: SourcePosition;
+  /** Short phrase naming where the measured value comes from. */
+  detail?: string;
 }
 
 export interface FileResult {

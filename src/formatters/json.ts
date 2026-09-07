@@ -51,6 +51,8 @@ export function functionMetricsJson(fn: FunctionMetrics): Record<string, unknown
     npathComplexity: fn.npathComplexity.toString(),
     maximumNestingDepth: fn.maximumNestingDepth,
     maximumNestingLocation: fn.maximumNestingLocation,
+    maximumNestingPath: fn.maximumNestingPath,
+    decisions: fn.decisions,
     maximumConditionComplexity: fn.maximumConditionComplexity,
     cognitiveContributions: fn.cognitiveContributions,
     conditions: fn.conditions,

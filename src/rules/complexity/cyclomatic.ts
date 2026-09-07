@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { functionDiagnostic } from '../shared.ts';
+import { describeDecisions, functionDiagnostic } from '../shared.ts';
 
 export const cyclomaticRule: RuleDefinition = {
   id: 'complexity/cyclomatic',
@@ -34,6 +34,7 @@ Nested functions are measured separately.`,
           `Function \`${fn.name}\` has cyclomatic complexity ${fn.cyclomaticComplexity}; maximum is ${options.max}`,
           fn.cyclomaticComplexity,
           options.max,
+          describeDecisions(fn),
         ),
       );
   },

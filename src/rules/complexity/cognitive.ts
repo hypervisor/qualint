@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { functionDiagnostic } from '../shared.ts';
+import { describeCognitive, functionDiagnostic } from '../shared.ts';
 
 export const cognitiveRule: RuleDefinition = {
   id: 'complexity/cognitive',
@@ -38,6 +38,7 @@ separately. Use \`qualint inspect <file>\` to see every contribution.`,
           `Function \`${fn.name}\` has cognitive complexity ${fn.cognitiveComplexity}; maximum is ${options.max}`,
           fn.cognitiveComplexity,
           options.max,
+          describeCognitive(fn),
         ),
       );
   },

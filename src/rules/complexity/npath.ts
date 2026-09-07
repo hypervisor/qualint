@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { formatBig, functionDiagnostic } from '../shared.ts';
+import { describeDecisions, formatBig, functionDiagnostic } from '../shared.ts';
 
 export const npathRule: RuleDefinition = {
   id: 'complexity/npath',
@@ -38,6 +38,7 @@ Values can exceed 2^53; JSON output carries them as decimal strings.`,
           `Function \`${fn.name}\` has NPath complexity ${formatBig(fn.npathComplexity)}; maximum is ${options.max}`,
           fn.npathComplexity.toString(),
           options.max,
+          describeDecisions(fn),
         ),
       );
   },

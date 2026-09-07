@@ -51,6 +51,10 @@ function buildFunctionMetrics(found: FoundFunction, code: string, lines: LineTab
     npathComplexity: computeNpath(node),
     maximumNestingDepth: flow.maxDepth,
     maximumNestingLocation: flow.maxDepthNode === null ? null : positionOf(flow.maxDepthNode.loc.start),
+    maximumNestingPath: flow.maxDepthPath,
+    decisions: [...flow.decisions]
+      .map(([kind, count]) => ({ kind, count }))
+      .sort((a, b) => b.count - a.count || (a.kind < b.kind ? -1 : 1)),
     maximumConditionComplexity,
     conditions: flow.conditions,
   };

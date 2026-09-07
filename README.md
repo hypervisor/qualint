@@ -14,11 +14,16 @@ $ qualint
 src/orders/process-order.ts
 
   42:1  error  Function `processOrder` has cognitive complexity 38; maximum is 30  complexity/cognitive
+               costliest: 71:9 for-of +5, 67:7 if +4, 88:3 switch +3
   42:1  error  Function `processOrder` contains 131 source lines; maximum is 120   size/function
   67:7  error  Nesting depth is 6; maximum is 5                                    complexity/nesting
+               path: 44:3 if > 46:5 for-of > 51:7 if > 58:9 try > 67:7 if
 
 ✖ 3 problems (3 errors, 0 warnings)
 ```
+
+Complexity diagnostics carry a second line saying where the score comes from,
+so a fix does not need a follow-up `qualint inspect` to find the hot spot.
 
 ```text
 $ qualint

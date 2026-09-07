@@ -41,8 +41,11 @@ function formatFunction(fn: FunctionMetrics, rules: ResolvedRules): string {
     ['maximum condition', String(fn.maximumConditionComplexity), limitText(rules, 'complexity/condition')],
   ];
   const lines = [`${fn.name} (${start.line}:${start.column}–${end.line}:${end.column})`, table(rows)];
-  if (fn.maximumNestingLocation !== null && fn.maximumNestingDepth > 0) {
-    lines.push(`  deepest construct at ${fn.maximumNestingLocation.line}:${fn.maximumNestingLocation.column}`);
+  if (fn.maximumNestingPath.length > 0) {
+    lines.push(`  nesting path: ${fn.maximumNestingPath.map((s) => `${s.location.line}:${s.location.column} ${s.construct}`).join(' > ')}`);
+  }
+  if (fn.decisions.length > 0) {
+    lines.push(`  decisions: ${fn.decisions.map((d) => `${d.count} ${d.kind}`).join(', ')}`);
   }
   if (fn.cognitiveContributions.length > 0) {
     lines.push('  cognitive contributions');

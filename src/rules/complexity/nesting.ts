@@ -1,5 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
+import { describeNesting } from '../shared.ts';
 
 export const nestingRule: RuleDefinition = {
   id: 'complexity/nesting',
@@ -24,12 +25,16 @@ The diagnostic points at the construct sitting at the maximum depth.`,
   check(metrics, options) {
     return metrics.functions
       .filter((fn) => fn.maximumNestingDepth > options.max && fn.maximumNestingLocation !== null)
-      .map((fn) => ({
-        message: `Nesting depth is ${fn.maximumNestingDepth}; maximum is ${options.max}`,
-        value: fn.maximumNestingDepth,
-        maximum: options.max,
-        entity: fn.name,
-        location: fn.maximumNestingLocation!,
-      }));
+      .map((fn) => {
+        const detail = describeNesting(fn);
+        return {
+          message: `Nesting depth is ${fn.maximumNestingDepth}; maximum is ${options.max}`,
+          value: fn.maximumNestingDepth,
+          maximum: options.max,
+          entity: fn.name,
+          location: fn.maximumNestingLocation!,
+          ...(detail === undefined ? {} : { detail }),
+        };
+      });
   },
 };

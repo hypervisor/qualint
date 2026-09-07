@@ -12,6 +12,7 @@ interface Row {
   message: string;
   rule: string;
   isError: boolean;
+  detail: string | undefined;
 }
 
 type Painter = ReturnType<typeof painter>;
@@ -52,10 +53,13 @@ function formatFile(filePath: string, rows: readonly Row[], paint: Painter): str
   const positionWidth = Math.max(...rows.map((row) => row.position.length));
   const severityWidth = Math.max(...rows.map((row) => row.severity.length));
   const messageWidth = Math.max(...rows.map((row) => row.message.length));
-  const lines = rows.map((row) => {
+  // Detail lines hang under the message column so the table still reads as a table.
+  const indent = ' '.repeat(2 + positionWidth + 2 + severityWidth + 2);
+  const lines = rows.flatMap((row) => {
     const severity = row.severity.padEnd(severityWidth);
     const painted = row.isError ? paint.red(severity) : paint.yellow(severity);
-    return `  ${paint.dim(row.position.padEnd(positionWidth))}  ${painted}  ${row.message.padEnd(messageWidth)}  ${paint.dim(row.rule)}`;
+    const head = `  ${paint.dim(row.position.padEnd(positionWidth))}  ${painted}  ${row.message.padEnd(messageWidth)}  ${paint.dim(row.rule)}`;
+    return row.detail === undefined ? [head] : [head, `${indent}${paint.dim(row.detail)}`];
   });
   return `${paint.underline(filePath)}\n\n${lines.join('\n')}\n`;
 }
@@ -83,6 +87,7 @@ function diagnosticRow(diagnostic: Diagnostic): Row {
     message: diagnostic.message,
     rule: diagnostic.rule,
     isError: diagnostic.severity === 'error',
+    detail: diagnostic.detail,
   };
 }
 
@@ -93,6 +98,7 @@ function failureRow(message: string, location: { line: number; column: number } 
     message,
     rule: 'parse',
     isError: true,
+    detail: undefined,
   };
 }
 

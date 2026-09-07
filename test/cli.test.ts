@@ -75,6 +75,7 @@ describe('cli', () => {
     assert.equal(result.stdout, `src/complex.ts
 
   7:13  error  Nesting depth is 6; maximum is 5  complexity/nesting
+               path: 2:3 if > 3:5 if > 4:7 if > 5:9 if > 6:11 if > 7:13 if
 
 ✖ 1 problem (1 error, 0 warnings)
 `);
@@ -130,6 +131,7 @@ describe('cli', () => {
       `src/complex.ts
 
   7:13  error  Nesting depth is 6; maximum is 5  complexity/nesting
+               path: 2:3 if > 3:5 if > 4:7 if > 5:9 if > 6:11 if > 7:13 if
 
 ✔ src/simple.ts
 
@@ -233,6 +235,49 @@ overrides:
     assert.match(result.stdout, /✖ 1 file could not be analyzed/);
   });
 
+  it('explains where a score comes from instead of only naming it', async () => {
+    const dir = await fixture({
+      '.qualintrc.yaml': 'preset: strict\n',
+      'src/deep.ts': `export function walk(root) {
+  for (const child of root.children) {
+    if (child.kind === 'block') {
+      try {
+        while (child.next) {
+          if (child.next.valid && child.next.ready) {
+            child.visit();
+          }
+        }
+      } catch (e) {
+        report(e);
+      }
+    }
+  }
+}
+`,
+      'src/nested.ts': COMPLEX,
+      'src/branchy.ts': `export function classify(item) {
+  let out = 0;
+${Array.from({ length: 12 }, (_, i) => `  if (item.k === ${i}) { out += ${i}; }`).join('\n')}
+  return out;
+}
+`,
+    });
+    const text = await cli(dir);
+
+    // Nesting says how the code got that deep, not just how deep it is.
+    assert.match(text.stdout, /Nesting depth is 5; maximum is 4  complexity\/nesting\n\s+path: 2:3 for-of > 3:5 if > 4:7 try > 5:9 while > 6:11 if\n/);
+    // Cyclomatic names the decision points behind the count.
+    assert.match(text.stdout, /has cyclomatic complexity 13.*\n\s+decisions: 12 if\n/);
+    // Cognitive names the constructs that cost the most, deepest first.
+    assert.match(text.stdout, /has cognitive complexity 21.*\n\s+costliest: 7:13 if \+6, 6:11 if \+5, 5:9 if \+4\n/);
+
+    const json = JSON.parse((await cli(dir, '--format', 'json')).stdout);
+    const detailOf = (file: string, rule: string) =>
+      json.files.find((f: { path: string }) => f.path === file).diagnostics.find((d: { rule: string }) => d.rule === rule).detail;
+    assert.equal(detailOf('src/deep.ts', 'complexity/nesting'), 'path: 2:3 for-of > 3:5 if > 4:7 try > 5:9 while > 6:11 if');
+    assert.equal(detailOf('src/branchy.ts', 'complexity/cyclomatic'), 'decisions: 12 if');
+  });
+
   it('emits a single JSON document that agrees with stylish output', async () => {
     const dir = await fixture({ 'src/complex.ts': COMPLEX, 'src/broken.ts': 'let = ;' });
     const result = await cli(dir, '--format', 'json');
@@ -252,6 +297,7 @@ overrides:
         maximum: 5,
         entity: 'process',
         location: { line: 7, column: 13 },
+        detail: 'path: 2:3 if > 3:5 if > 4:7 if > 5:9 if > 6:11 if > 7:13 if',
       },
     ]);
   });
