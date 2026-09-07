@@ -80,6 +80,34 @@ describe('cli', () => {
 `);
   });
 
+  it('skips vendored, packaged and minified files by default', async () => {
+    // One long line plus a high average is what a bundle looks like; a lone long
+    // line in hand-written source is not.
+    const minified = `${'function f(a,b){return a+b}'.repeat(60)}\n`.repeat(6);
+    const longLine = `const DATA = "${'x'.repeat(3000)}";\n${'const y = 1;\n'.repeat(200)}${COMPLEX}`;
+    const dir = await fixture({
+      'src/real.ts': COMPLEX,
+      'src/data-uri.ts': longLine,
+      'vendor/lib.js': COMPLEX,
+      'frontend/public/vendor/monaco/worker.js': COMPLEX,
+      'out/App.app/Contents/Resources/spec.js': COMPLEX,
+      'static/htmx.min.js': COMPLEX,
+      'assets/app.bundle.js': COMPLEX,
+      'src/looks-bundled.js': minified,
+    });
+    const result = await cli(dir, '--format', 'json');
+    const analyzed = JSON.parse(result.stdout).files.map((f: { path: string }) => f.path);
+    assert.deepEqual(analyzed, ['src/data-uri.ts', 'src/real.ts']);
+
+    const verbose = await cli(dir, '--verbose');
+    assert.match(verbose.stderr, /skipped 1 file that look/);
+
+    // inspect is explicit, so it never skips.
+    const inspected = await cli(dir, 'inspect', 'src/looks-bundled.js');
+    assert.equal(inspected.code, 0);
+    assert.match(inspected.stdout, /physical lines/);
+  });
+
   it('prints a single confirmation line when everything passes', async () => {
     const dir = await fixture({ 'src/simple.ts': SIMPLE, 'src/other.ts': SIMPLE });
     const result = await cli(dir);

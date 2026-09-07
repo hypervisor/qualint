@@ -64,3 +64,29 @@ export function parseSource(code: string, filePath: string): ParsedFile {
     throw new ParseFailure(error instanceof Error ? error.message : String(error), null, null);
   }
 }
+
+/**
+ * Recognizes machine-generated bundles that no exclusion pattern happened to
+ * name. Both conditions must hold: one very long line, and a high average line
+ * length across the file. Hand-written source can carry a single long line (an
+ * embedded data URI, a wide regular expression) but not a high average.
+ */
+export function looksMinified(code: string): boolean {
+  if (code.length < MINIFIED_LONGEST_LINE) {
+    return false;
+  }
+  let longest = 0;
+  let lines = 0;
+  let lineStart = 0;
+  for (let index = 0; index <= code.length; index++) {
+    if (index === code.length || code.charCodeAt(index) === 0x0a) {
+      longest = Math.max(longest, index - lineStart);
+      lineStart = index + 1;
+      lines++;
+    }
+  }
+  return longest > MINIFIED_LONGEST_LINE && code.length / lines > MINIFIED_AVERAGE_LINE;
+}
+
+const MINIFIED_LONGEST_LINE = 1000;
+const MINIFIED_AVERAGE_LINE = 200;

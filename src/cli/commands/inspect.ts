@@ -15,7 +15,8 @@ export async function runInspect(args: CliArguments, loaded: LoadedConfig, conte
   }
   const outcomes: FileOutcome[] = [];
   for (const argument of args.positionals) {
-    outcomes.push(await analyzePath(path.resolve(context.cwd, argument), loaded, context.cwd));
+    // inspect never skips: the user named the file explicitly.
+    outcomes.push((await analyzePath(path.resolve(context.cwd, argument), loaded, context.cwd))!);
   }
 
   if (args.format === 'json') {

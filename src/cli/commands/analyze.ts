@@ -7,20 +7,32 @@ import { discoverFiles } from '../../files/discover-files.ts';
 import { toPosixPath } from '../../files/glob.ts';
 import { formatJson } from '../../formatters/json.ts';
 import { formatStylish } from '../../formatters/stylish.ts';
-import { ParseFailure, parseSource } from '../../parser/parse-file.ts';
+import { looksMinified, ParseFailure, parseSource } from '../../parser/parse-file.ts';
 import { compareStrings, runRules } from '../../rules/registry.ts';
 import type { FileOutcome, RunSummary } from '../../types.ts';
 import type { CliArguments } from '../args.ts';
 import { type CliContext, EXIT_FAILURE, EXIT_OK, EXIT_PROBLEMS, writeLine } from '../context.ts';
 
-/** Analyzes one file from disk into an outcome; never throws for per-file problems. */
-export async function analyzePath(absolutePath: string, loaded: LoadedConfig, cwd: string): Promise<FileOutcome> {
+/**
+ * Analyzes one file from disk into an outcome; never throws for per-file
+ * problems. Returns null when `skipGenerated` is set and the file turns out to
+ * be a bundle, which cannot be told from its path alone.
+ */
+export async function analyzePath(
+  absolutePath: string,
+  loaded: LoadedConfig,
+  cwd: string,
+  skipGenerated = false,
+): Promise<FileOutcome | null> {
   const displayPath = toPosixPath(path.relative(cwd, absolutePath)) || path.basename(absolutePath);
   let code: string;
   try {
     code = await fs.readFile(absolutePath, 'utf8');
   } catch (error) {
     return { kind: 'failed', path: displayPath, message: `Cannot read file: ${describe(error)}`, location: null };
+  }
+  if (skipGenerated && looksMinified(code)) {
+    return null;
   }
   try {
     const metrics = analyzeFile(parseSource(code, absolutePath));
@@ -89,8 +101,17 @@ export async function runAnalyze(args: CliArguments, loaded: LoadedConfig, conte
     return EXIT_OK;
   }
   const outcomes: FileOutcome[] = [];
+  let skipped = 0;
   for (const file of files) {
-    outcomes.push(await analyzePath(file, loaded, context.cwd));
+    const outcome = await analyzePath(file, loaded, context.cwd, true);
+    if (outcome === null) {
+      skipped++;
+      continue;
+    }
+    outcomes.push(outcome);
+  }
+  if (skipped > 0 && context.verbose) {
+    writeLine(context.stderr, `qualint: skipped ${skipped} file${skipped === 1 ? '' : 's'} that look generated`);
   }
   outcomes.sort((a, b) => compareStrings(a.path, b.path));
   const summary = summarize(outcomes);

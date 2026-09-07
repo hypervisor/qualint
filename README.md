@@ -171,9 +171,15 @@ Anything unknown (a property, a rule name, an option) is a configuration error.
 The message names the offending key and the exit code is 2.
 
 When `exclude` is omitted, these are skipped: `node_modules`, `dist`, `build`,
-`coverage`, hidden directories, `*.generated.*` and declaration files (`*.d.ts`,
-`*.d.mts`, `*.d.cts`). Globs support `**`, `*`, `?`, `[abc]` and `{a,b}`. A
-pattern without a slash matches the file name at any depth.
+`out`, `coverage`, `vendor`, hidden directories, `*.generated.*`, `*.min.*`,
+`*.bundle.*` and declaration files (`*.d.ts`, `*.d.mts`, `*.d.cts`). Setting
+`exclude` replaces that whole list. Globs support `**`, `*`, `?`, `[abc]` and
+`{a,b}`. A pattern without a slash matches the file name at any depth.
+
+Files that no pattern names but that turn out to be bundles are skipped too,
+recognised by having both a very long line and a high average line length.
+Hand-written code with one long line, such as an embedded data URI, is kept.
+`qualint inspect` never skips, since you named the file yourself.
 
 There are no inline suppression comments. If a function needs a different limit,
 put it in an override.
