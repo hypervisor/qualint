@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { describeDecisions, functionDiagnostic } from '../shared.ts';
+import { describeDecisions, functionThreshold } from '../shared.ts';
 
 export const cyclomaticRule: RuleDefinition = {
   id: 'complexity/cyclomatic',
@@ -25,17 +25,9 @@ function owns:
 else, finally, default, plain blocks and nested function bodies add nothing.
 TypeScript-only syntax (as, satisfies, !, type annotations) adds nothing.
 Nested functions are measured separately.`,
-  check(metrics, options) {
-    return metrics.functions
-      .filter((fn) => fn.cyclomaticComplexity > options.max)
-      .map((fn) =>
-        functionDiagnostic(
-          fn,
-          `Function \`${fn.name}\` has cyclomatic complexity ${fn.cyclomaticComplexity}; maximum is ${options.max}`,
-          fn.cyclomaticComplexity,
-          options.max,
-          describeDecisions(fn),
-        ),
-      );
-  },
+  check: functionThreshold(
+    (fn) => fn.cyclomaticComplexity,
+    (fn, value, max) => `Function \`${fn.name}\` has cyclomatic complexity ${value}; maximum is ${max}`,
+    describeDecisions,
+  ),
 };

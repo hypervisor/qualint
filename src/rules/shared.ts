@@ -1,4 +1,4 @@
-import type { FunctionMetrics } from '../types.ts';
+import type { FileMetrics, FunctionMetrics, RuleOptions } from '../types.ts';
 import type { DiagnosticDraft } from './registry.ts';
 
 /** Most a detail line names before it stops being quicker to read than the code. */
@@ -13,6 +13,23 @@ export function functionDiagnostic(
   detail?: string | undefined,
 ): DiagnosticDraft {
   return { message, value, maximum, entity: fn.name, location: fn.location.start, ...(detail === undefined ? {} : { detail }) };
+}
+
+/**
+ * Builds the `check` for a rule that compares one per-function number with
+ * `max`. Most rules are exactly that, and writing the filter-and-map by hand in
+ * each of them was itself duplication.
+ */
+export function functionThreshold(
+  measure: (fn: FunctionMetrics) => number,
+  describe: (fn: FunctionMetrics, value: number, max: number) => string,
+  detail?: (fn: FunctionMetrics) => string | undefined,
+): (metrics: FileMetrics, options: RuleOptions) => DiagnosticDraft[] {
+  return (metrics, options) =>
+    metrics.functions
+      .map((fn) => ({ fn, value: measure(fn) }))
+      .filter(({ value }) => value > options.max)
+      .map(({ fn, value }) => functionDiagnostic(fn, describe(fn, value, options.max), value, options.max, detail?.(fn)));
 }
 
 /**

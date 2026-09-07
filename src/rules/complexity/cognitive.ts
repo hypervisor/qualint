@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { describeCognitive, functionDiagnostic } from '../shared.ts';
+import { describeCognitive, functionThreshold } from '../shared.ts';
 
 export const cognitiveRule: RuleDefinition = {
   id: 'complexity/cognitive',
@@ -29,17 +29,9 @@ The following add 1 without a nesting penalty:
 Nothing is added for guard-clause returns, plain break/continue, optional
 chaining, try, finally or TypeScript-only syntax. Nested functions are scored
 separately. Use \`qualint inspect <file>\` to see every contribution.`,
-  check(metrics, options) {
-    return metrics.functions
-      .filter((fn) => fn.cognitiveComplexity > options.max)
-      .map((fn) =>
-        functionDiagnostic(
-          fn,
-          `Function \`${fn.name}\` has cognitive complexity ${fn.cognitiveComplexity}; maximum is ${options.max}`,
-          fn.cognitiveComplexity,
-          options.max,
-          describeCognitive(fn),
-        ),
-      );
-  },
+  check: functionThreshold(
+    (fn) => fn.cognitiveComplexity,
+    (fn, value, max) => `Function \`${fn.name}\` has cognitive complexity ${value}; maximum is ${max}`,
+    describeCognitive,
+  ),
 };

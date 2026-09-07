@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { functionDiagnostic } from '../shared.ts';
+import { functionThreshold } from '../shared.ts';
 
 export const statementsRule: RuleDefinition = {
   id: 'size/statements',
@@ -21,16 +21,8 @@ depth inside branches and loops. Not counted:
 
 A variable declaration counts once regardless of declarators. A nested function
 declaration counts as one statement; its body is excluded.`,
-  check(metrics, options) {
-    return metrics.functions
-      .filter((fn) => fn.statementCount > options.max)
-      .map((fn) =>
-        functionDiagnostic(
-          fn,
-          `Function \`${fn.name}\` contains ${fn.statementCount} statements; maximum is ${options.max}`,
-          fn.statementCount,
-          options.max,
-        ),
-      );
-  },
+  check: functionThreshold(
+    (fn) => fn.statementCount,
+    (fn, value, max) => `Function \`${fn.name}\` contains ${value} statements; maximum is ${max}`,
+  ),
 };

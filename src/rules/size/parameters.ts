@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { functionDiagnostic } from '../shared.ts';
+import { functionThreshold } from '../shared.ts';
 
 export const parametersRule: RuleDefinition = {
   id: 'size/parameters',
@@ -12,16 +12,8 @@ export const parametersRule: RuleDefinition = {
   explanation: `Each syntactic parameter counts once. Destructured, defaulted and rest
 parameters each count as one. A TypeScript \`this\` pseudo-parameter does not
 count because callers never supply it.`,
-  check(metrics, options) {
-    return metrics.functions
-      .filter((fn) => fn.parameterCount > options.max)
-      .map((fn) =>
-        functionDiagnostic(
-          fn,
-          `Function \`${fn.name}\` has ${fn.parameterCount} parameters; maximum is ${options.max}`,
-          fn.parameterCount,
-          options.max,
-        ),
-      );
-  },
+  check: functionThreshold(
+    (fn) => fn.parameterCount,
+    (fn, value, max) => `Function \`${fn.name}\` has ${value} parameters; maximum is ${max}`,
+  ),
 };

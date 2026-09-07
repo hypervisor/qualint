@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET, presetMax } from '../../config/presets.ts';
 import type { RuleDefinition } from '../registry.ts';
-import { functionDiagnostic } from '../shared.ts';
+import { functionThreshold } from '../shared.ts';
 
 export const functionSizeRule: RuleDefinition = {
   id: 'size/function',
@@ -16,16 +16,8 @@ contain code; blank and comment-only lines inside the function do not.
 Nested functions remain part of the enclosing function's physical size even
 though their statements and complexity are measured independently. Methods
 include their key and modifiers.`,
-  check(metrics, options) {
-    return metrics.functions
-      .filter((fn) => fn.sourceLines > options.max)
-      .map((fn) =>
-        functionDiagnostic(
-          fn,
-          `Function \`${fn.name}\` contains ${fn.sourceLines} source lines; maximum is ${options.max}`,
-          fn.sourceLines,
-          options.max,
-        ),
-      );
-  },
+  check: functionThreshold(
+    (fn) => fn.sourceLines,
+    (fn, value, max) => `Function \`${fn.name}\` contains ${value} source lines; maximum is ${max}`,
+  ),
 };
