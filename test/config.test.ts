@@ -18,14 +18,12 @@ describe('config validation', () => {
         'complexity/cognitive': 'warn',
         'complexity/npath': 'error',
         'complexity/nesting': ['warn', { max: 6 }],
-        'complexity/halstead-difficulty': ['error', { max: 12.5 }],
         'size/file': ['error'],
       },
     });
     assert.equal(config.rules.get('complexity/cyclomatic'), 'off');
     assert.deepEqual(config.rules.get('complexity/cognitive'), { severity: 'warn', options: { max: 30 } });
     assert.deepEqual(config.rules.get('complexity/nesting'), { severity: 'warn', options: { max: 6 } });
-    assert.deepEqual(config.rules.get('complexity/halstead-difficulty'), { severity: 'error', options: { max: 12.5 } });
     assert.deepEqual(config.rules.get('size/file'), { severity: 'error', options: { max: 800 } });
     assert.equal(config.preset, 'standard');
   });
@@ -61,7 +59,6 @@ describe('config loading and resolution', () => {
     assert.equal(loaded.configPath, null);
     const rules = resolveRulesForFile(loaded, path.join(dir, 'a.ts'));
     assert.deepEqual(rules.get('complexity/cyclomatic'), { severity: 'error', options: { max: 20 } });
-    assert.equal(rules.has('complexity/halstead-difficulty'), false);
   });
 
   it('applies a configured preset to every rule not set explicitly', async () => {
@@ -81,7 +78,7 @@ describe('config loading and resolution', () => {
     await fs.writeFile(
       path.join(root, '.qualintrc.json'),
       JSON.stringify({
-        rules: { 'size/function': ['warn', { max: 40 }], 'complexity/halstead-difficulty': 'error' },
+        rules: { 'size/function': ['warn', { max: 40 }] },
         overrides: [
           { files: ['**/*.test.*'], rules: { 'size/function': ['error'], 'size/file': 'off' } },
           { files: ['packages/api/**'], rules: { 'complexity/nesting': ['error', { max: 3 }] } },
@@ -94,7 +91,6 @@ describe('config loading and resolution', () => {
 
     const plain = resolveRulesForFile(loaded, path.join(nested, 'a.ts'));
     assert.deepEqual(plain.get('size/function'), { severity: 'warn', options: { max: 40 } });
-    assert.deepEqual(plain.get('complexity/halstead-difficulty'), { severity: 'error', options: { max: 30 } });
     assert.deepEqual(plain.get('complexity/nesting'), { severity: 'error', options: { max: 3 } });
     assert.equal(plain.has('size/file'), true);
 

@@ -25,7 +25,6 @@ export const PRESETS: Readonly<Record<RuleId, PresetMaxima>> = {
   'complexity/npath': { strict: 200, standard: 1000, relaxed: 5000 },
   'complexity/nesting': { strict: 4, standard: 5, relaxed: 6 },
   'complexity/condition': { strict: 5, standard: 7, relaxed: 10 },
-  'complexity/halstead-difficulty': { strict: 20, standard: 30, relaxed: 45 },
   'size/file': { strict: 500, standard: 800, relaxed: 1500 },
   'size/function': { strict: 60, standard: 120, relaxed: 200 },
   'size/statements': { strict: 30, standard: 60, relaxed: 100 },

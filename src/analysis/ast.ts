@@ -38,7 +38,7 @@ const RUNTIME_TS_NODES: ReadonlySet<string> = new Set([
  * True for syntax that is erased at compile time: type annotations, interfaces,
  * type aliases, generics, `declare` statements, type-only imports and exports,
  * abstract members and overload signatures. Such nodes contribute nothing to
- * control flow, statements or Halstead tokens.
+ * control flow or statements.
  */
 export function isTypeOnlyNode(node: Node): boolean {
   if ('declare' in node && node.declare === true) {

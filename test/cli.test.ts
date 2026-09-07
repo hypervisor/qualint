@@ -238,7 +238,7 @@ overrides:
     const result = await cli(dir, '--format', 'json');
     assert.equal(result.code, 2);
     const document = JSON.parse(result.stdout);
-    assert.equal(document.version, 1);
+    assert.equal(document.version, 2);
     assert.deepEqual(document.summary, { analyzedFiles: 1, failedFiles: 1, errors: 1, warnings: 0 });
     assert.deepEqual(document.files.map((file: { path: string }) => file.path), ['src/broken.ts', 'src/complex.ts']);
     assert.match(document.files[0].error.message, /^Parse error/);
@@ -266,7 +266,6 @@ overrides:
     assert.match(text.stdout, /  cognitive complexity +21  max 30\n/);
     assert.match(text.stdout, /  NPath complexity +7  max 1000\n/);
     assert.match(text.stdout, /  maximum nesting +6  max 5\n/);
-    assert.match(text.stdout, /  Halstead difficulty +[\d.]+  off\n/);
     assert.match(text.stdout, /cognitive contributions\n    2:3 +if +\+1 +\= 1\n    3:5 +if +\+1 \+1 nesting +\= 3\n/);
 
     const json = await cli(dir, 'inspect', 'src/complex.ts', '--format', 'json');
@@ -299,7 +298,7 @@ overrides:
     const written = await fs.readFile(path.join(dir, '.qualintrc.yaml'), 'utf8');
     assert.match(written, /^preset: strict$/m);
     assert.match(written, /^#   complexity\/cyclomatic: \[error, \{ max: 10 \}\]$/m);
-    assert.match(written, /^#   complexity\/halstead-difficulty: off$/m);
+    assert.match(written, /^#   size\/parameters: \[error, \{ max: 5 \}\]$/m);
 
     // The generated file loads, and its preset is in effect.
     const run = await cli(dir);

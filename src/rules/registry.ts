@@ -2,7 +2,6 @@ import type { Diagnostic, FileMetrics, ResolvedRules, RuleId, RuleOptions, Sever
 import { cognitiveRule } from './complexity/cognitive.ts';
 import { conditionRule } from './complexity/condition.ts';
 import { cyclomaticRule } from './complexity/cyclomatic.ts';
-import { halsteadDifficultyRule } from './complexity/halstead-difficulty.ts';
 import { nestingRule } from './complexity/nesting.ts';
 import { npathRule } from './complexity/npath.ts';
 import { fileSizeRule } from './size/file.ts';
@@ -30,7 +29,6 @@ const definitions: readonly RuleDefinition[] = [
   npathRule,
   nestingRule,
   conditionRule,
-  halsteadDifficultyRule,
   fileSizeRule,
   functionSizeRule,
   statementsRule,

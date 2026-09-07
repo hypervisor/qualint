@@ -11,7 +11,6 @@ import {
   type Node,
   positionOf,
 } from './ast.ts';
-import { MARK_IGNORE, MARK_NONE, MARK_OPERAND, MARK_OPERATOR, type TokenMarks } from './halstead.ts';
 
 /**
  * Metrics accumulated for one function (or for module scope) during the single
@@ -25,8 +24,6 @@ export interface FlowAccumulator {
   maxDepth: number;
   maxDepthNode: Node | null;
   conditions: ConditionGroup[];
-  /** Entity ranges of directly nested functions, excluded from Halstead counting. */
-  nestedRanges: Array<readonly [number, number]>;
 }
 
 export interface FoundFunction {
@@ -52,7 +49,6 @@ function newAccumulator(): FlowAccumulator {
     maxDepth: 0,
     maxDepthNode: null,
     conditions: [],
-    nestedRanges: [],
   };
 }
 
@@ -63,14 +59,9 @@ function newAccumulator(): FlowAccumulator {
  */
 export class ControlFlowWalker {
   readonly functions: FoundFunction[] = [];
-  private readonly marks: TokenMarks;
   private readonly ancestors: Node[] = [];
   private flow: FlowAccumulator = newAccumulator();
   private group: ConditionGroupState | null = null;
-
-  constructor(marks: TokenMarks) {
-    this.marks = marks;
-  }
 
   walkProgram(program: TSESTree.Program): FlowAccumulator {
     this.flow = newAccumulator();
@@ -89,7 +80,6 @@ export class ControlFlowWalker {
       return;
     }
     if (isTypeOnlyNode(node)) {
-      this.marks.markRange(node.range, MARK_IGNORE);
       return;
     }
     if (isCountedStatement(node)) {
@@ -195,7 +185,6 @@ export class ControlFlowWalker {
         if (node.optional) {
           this.flow.cyclomatic++;
         } else if (node.computed) {
-          this.marks.markPunctuator(node.object.range[1], node.property.range[0], '[', MARK_OPERATOR);
         }
         break;
       case 'CallExpression':
@@ -203,12 +192,10 @@ export class ControlFlowWalker {
           this.flow.cyclomatic++;
         } else {
           const from = node.typeArguments ? node.typeArguments.range[1] : node.callee.range[1];
-          this.marks.markPunctuator(from, node.range[1], '(', MARK_OPERATOR);
         }
         break;
       case 'NewExpression': {
         const from = node.typeArguments ? node.typeArguments.range[1] : node.callee.range[1];
-        this.marks.markPunctuator(from, node.range[1], '(', MARK_OPERATOR);
         break;
       }
       case 'BreakStatement':
@@ -217,40 +204,12 @@ export class ControlFlowWalker {
           this.addCognitive(node, node.type === 'BreakStatement' ? 'break label' : 'continue label', 1, 0);
         }
         break;
-      case 'Identifier':
-      case 'PrivateIdentifier':
-      case 'JSXIdentifier':
-      case 'Literal':
-        this.marks.markAt(node.range[0], MARK_OPERAND);
-        break;
       case 'JSXText':
-        this.marks.markAt(node.range[0], node.value.trim() === '' ? MARK_IGNORE : MARK_OPERAND);
         return;
-      case 'ArrayExpression':
-      case 'ArrayPattern':
-      case 'ObjectExpression':
-      case 'ObjectPattern':
-        this.marks.markAt(node.range[0], MARK_OPERATOR);
-        break;
-      case 'JSXOpeningElement':
-      case 'JSXClosingElement':
-      case 'JSXOpeningFragment':
-      case 'JSXClosingFragment':
-        this.marks.markRange(node.range, MARK_IGNORE);
-        break;
-      case 'JSXExpressionContainer':
-        if (node.expression.type !== 'JSXEmptyExpression') {
-          this.marks.markRange(node.expression.range, MARK_NONE);
-        }
-        break;
-      case 'JSXSpreadAttribute':
-        this.marks.markRange(node.argument.range, MARK_NONE);
-        break;
       case 'TSAsExpression':
       case 'TSSatisfiesExpression':
       case 'TSNonNullExpression':
       case 'TSInstantiationExpression':
-        this.marks.markRange([node.expression.range[1], node.range[1]], MARK_IGNORE);
         this.visitChild(node.expression, node, nesting, depth);
         return;
       default:
@@ -359,7 +318,6 @@ export class ControlFlowWalker {
 
   private visitFunction(node: FunctionNode, parent: Node): void {
     const entity = entityNodeOf(node, parent);
-    this.flow.nestedRanges.push(entity.range);
     if (node.type === 'FunctionDeclaration') {
       this.flow.statements++;
     }
@@ -372,17 +330,8 @@ export class ControlFlowWalker {
     const ancestors = [...this.ancestors];
 
     this.ancestors.push(node);
-    if (node.type !== 'ArrowFunctionExpression' && node.id !== null) {
-      this.marks.markAt(node.id.range[0], MARK_OPERAND);
-    }
     for (const parameter of node.params) {
       this.visit(parameter, node, 0, 0);
-    }
-    if (node.returnType) {
-      this.marks.markRange(node.returnType.range, MARK_IGNORE);
-    }
-    if (node.typeParameters) {
-      this.marks.markRange(node.typeParameters.range, MARK_IGNORE);
     }
     if (node.body) {
       if (node.body.type === 'BlockStatement') {

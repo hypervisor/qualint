@@ -1,6 +1,6 @@
 import type { FileMetrics, FileOutcome, FunctionMetrics, RunSummary } from '../types.ts';
 
-export const JSON_SCHEMA_VERSION = 1;
+export const JSON_SCHEMA_VERSION = 2;
 
 export interface JsonOptions {
   /** Include per-function metrics (used by `inspect`). */
@@ -52,7 +52,6 @@ export function functionMetricsJson(fn: FunctionMetrics): Record<string, unknown
     maximumNestingDepth: fn.maximumNestingDepth,
     maximumNestingLocation: fn.maximumNestingLocation,
     maximumConditionComplexity: fn.maximumConditionComplexity,
-    halstead: fn.halstead,
     cognitiveContributions: fn.cognitiveContributions,
     conditions: fn.conditions,
   };

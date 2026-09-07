@@ -39,9 +39,6 @@ function formatFunction(fn: FunctionMetrics, rules: ResolvedRules): string {
     ['NPath complexity', formatBig(fn.npathComplexity), limitText(rules, 'complexity/npath')],
     ['maximum nesting', String(fn.maximumNestingDepth), limitText(rules, 'complexity/nesting')],
     ['maximum condition', String(fn.maximumConditionComplexity), limitText(rules, 'complexity/condition')],
-    ['Halstead difficulty', fn.halstead.difficulty.toFixed(1), limitText(rules, 'complexity/halstead-difficulty')],
-    ['Halstead volume', fn.halstead.volume.toFixed(1), ''],
-    ['Halstead effort', fn.halstead.effort.toFixed(1), ''],
   ];
   const lines = [`${fn.name} (${start.line}:${start.column}–${end.line}:${end.column})`, table(rows)];
   if (fn.maximumNestingLocation !== null && fn.maximumNestingDepth > 0) {

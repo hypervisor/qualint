@@ -128,7 +128,6 @@ rules:
   complexity/npath: [error, { max: 1000 }]
   complexity/nesting: [error, { max: 5 }]
   complexity/condition: [error, { max: 7 }]
-  complexity/halstead-difficulty: off
   size/file: [error, { max: 800 }]
   size/function: [error, { max: 120 }]
   size/statements: [error, { max: 60 }]
@@ -154,7 +153,6 @@ to the preset's value rather than keeping the top-level one.
 | `complexity/npath`               |    200 |     1000 |    5000 |
 | `complexity/nesting`             |      4 |        5 |       6 |
 | `complexity/condition`           |      5 |        7 |      10 |
-| `complexity/halstead-difficulty` |     20 |       30 |      45 |
 | `size/file`                      |    500 |      800 |    1500 |
 | `size/function`                  |     60 |      120 |     200 |
 | `size/statements`                |     30 |       60 |     100 |
@@ -164,8 +162,7 @@ to the preset's value rather than keeping the top-level one.
 validation function with a handful of loops, or a mid-sized React component
 with some conditional rendering, should pass. `strict` is for code you want to
 keep small, like a shared library. `relaxed` is for getting an existing
-codebase under the gate before tightening. Halstead difficulty is off in all
-three; the number is the limit used if you turn it on.
+codebase under the gate before tightening.
 
 Anything unknown (a property, a rule name, an option) is a configuration error.
 The message names the offending key and the exit code is 2.
@@ -193,7 +190,6 @@ put it in an override.
 | `complexity/npath`               | function  | error, max 1000 | Acyclic execution paths. Decisions in sequence multiply.                 |
 | `complexity/nesting`             | function  | error, max 5    | Deepest stack of enclosing control-flow constructs                       |
 | `complexity/condition`           | condition | error, max 7    | Decision clauses in a single `if`/loop test, ternary or `&&` chain       |
-| `complexity/halstead-difficulty` | function  | off, max 30     | Halstead difficulty over the function's own tokens                       |
 | `size/file`                      | file      | error, max 800  | Source lines, ignoring blank and comment-only lines                      |
 | `size/function`                  | function  | error, max 120  | Source lines within the function                                         |
 | `size/statements`                | function  | error, max 60   | Executable statements the function owns                                  |
@@ -225,9 +221,6 @@ processOrder (42:1–172:2)
   NPath complexity          768  max 1000
   maximum nesting             6  max 5
   maximum condition           5  max 7
-  Halstead difficulty      17.4  off
-  Halstead volume         812.7
-  Halstead effort       14146.9
   deepest construct at 67:7
   cognitive contributions
     44:3  if      +1             = 1

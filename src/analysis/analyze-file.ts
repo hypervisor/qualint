@@ -4,23 +4,21 @@ import type { ParsedFile } from '../parser/parse-file.ts';
 import { locationOf, positionOf } from './ast.ts';
 import { ControlFlowWalker, type FoundFunction } from './control-flow.ts';
 import { deriveFunctionName } from './function-context.ts';
-import { computeHalstead, TokenMarks } from './halstead.ts';
 import { computeNpath } from './npath.ts';
 import { buildLineTable, countSourceLines, type LineTable } from './source-lines.ts';
 
 /**
  * Parses nothing and traverses the AST once: the walker gathers control-flow
- * metrics and token marks, after which per-function NPath, Halstead and
- * source-line figures are derived from the same parse result.
+ * metrics, after which per-function NPath and source-line figures are derived
+ * from the same parse result.
  */
 export function analyzeFile(parsed: ParsedFile): FileMetrics {
   const lines = buildLineTable(parsed.code, parsed.comments);
-  const marks = new TokenMarks(parsed.tokens);
-  const walker = new ControlFlowWalker(marks);
+  const walker = new ControlFlowWalker();
   const moduleFlow = walker.walkProgram(parsed.ast);
 
   const functions = walker.functions
-    .map((found) => buildFunctionMetrics(found, parsed.code, marks, lines))
+    .map((found) => buildFunctionMetrics(found, parsed.code, lines))
     .sort(compareByPosition);
 
   return {
@@ -33,10 +31,9 @@ export function analyzeFile(parsed: ParsedFile): FileMetrics {
   };
 }
 
-function buildFunctionMetrics(found: FoundFunction, code: string, marks: TokenMarks, lines: LineTable): FunctionMetrics {
+function buildFunctionMetrics(found: FoundFunction, code: string, lines: LineTable): FunctionMetrics {
   const { node, entity, flow } = found;
   const location = locationOf(entity);
-  const nested = [...flow.nestedRanges].sort((a, b) => a[0] - b[0]);
   let maximumConditionComplexity = 0;
   for (const condition of flow.conditions) {
     maximumConditionComplexity = Math.max(maximumConditionComplexity, condition.complexity);
@@ -56,7 +53,6 @@ function buildFunctionMetrics(found: FoundFunction, code: string, marks: TokenMa
     maximumNestingLocation: flow.maxDepthNode === null ? null : positionOf(flow.maxDepthNode.loc.start),
     maximumConditionComplexity,
     conditions: flow.conditions,
-    halstead: computeHalstead(marks, entity.range, nested),
   };
 }
 

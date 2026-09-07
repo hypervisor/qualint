@@ -17,18 +17,6 @@ export interface SourceLocation {
   end: SourcePosition;
 }
 
-export interface HalsteadMetrics {
-  distinctOperators: number;
-  distinctOperands: number;
-  totalOperators: number;
-  totalOperands: number;
-  vocabulary: number;
-  length: number;
-  volume: number;
-  difficulty: number;
-  effort: number;
-}
-
 /** One line of the explainable cognitive-complexity ledger. */
 export interface CognitiveContribution {
   location: SourcePosition;
@@ -59,7 +47,6 @@ export interface FunctionMetrics {
   maximumNestingLocation: SourcePosition | null;
   maximumConditionComplexity: number;
   conditions: ConditionGroup[];
-  halstead: HalsteadMetrics;
 }
 
 export interface FileMetrics {
@@ -80,7 +67,6 @@ export type RuleId =
   | 'complexity/npath'
   | 'complexity/nesting'
   | 'complexity/condition'
-  | 'complexity/halstead-difficulty'
   | 'size/file'
   | 'size/function'
   | 'size/statements'

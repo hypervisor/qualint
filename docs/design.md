@@ -161,7 +161,14 @@ Rule values use one of these forms:
 
 When only a severity is provided, the rule uses the default threshold. An override replaces the matching rule value; it does not merge the options object.
 
-Thresholds come in three presets, selected with the top-level `preset` property: `strict` (the values in the example above), `standard` (the default: cyclomatic 20, cognitive 30, NPath 1000, nesting 5, condition 7, Halstead difficulty 30, file 800, function 120, statements 60, parameters 6) and `relaxed` (30, 50, 5000, 6, 10, 45, 1500, 200, 100, 8). A rule value with only a severity uses the active preset's maximum. The per-rule sections below quote the `strict` value as the "default maximum" for the algorithm description; the effective default is the `standard` preset.
+> **Changed after v1.** The `complexity/halstead-difficulty` rule and all
+> Halstead metrics were removed. The rule was off by default, its output
+> implied no specific action, and the token-classification table it required
+> was a large part of the analysis code. Section 7.6 and the Halstead entries
+> in sections 6.3, 8 and 9 no longer describe the implementation. The JSON
+> schema version is now `2`.
+
+Thresholds come in three presets, selected with the top-level `preset` property: `strict` (the values in the example above), `standard` (the default: cyclomatic 20, cognitive 30, NPath 1000, nesting 5, condition 7, file 800, function 120, statements 60, parameters 6) and `relaxed` (30, 50, 5000, 6, 10, 1500, 200, 100, 8). A rule value with only a severity uses the active preset's maximum. The per-rule sections below quote the `strict` value as the "default maximum" for the algorithm description; the effective default is the `standard` preset.
 
 With no configuration file, Qualint uses the `standard` preset and analyzes supported files below the current directory. `node_modules`, common build/output directories, hidden directories, declaration files (`*.d.ts`), and generated files matching `*.generated.*` are excluded by default.
 
