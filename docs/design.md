@@ -251,10 +251,10 @@ Start each function at complexity `1`. Add one for each runtime decision point o
 - each non-default `switch` case;
 - each logical `&&`, `||`, or `??` operator;
 - each logical assignment `&&=`, `||=`, or `??=`;
-- each optional-chain segment that may short-circuit, such as `value?.member` or `fn?.()`;
+- each optional chain, counted once for the whole chain rather than per link;
 - a default parameter or destructuring default evaluated by the function.
 
-`else`, `finally`, `default`, plain lexical blocks, and nested function bodies add nothing. A chain such as `a?.b?.c` contains two optional-chain decision points. TypeScript-only syntax such as `as`, `satisfies`, type annotations, and non-null assertions adds nothing.
+`else`, `finally`, `default`, plain lexical blocks, and nested function bodies add nothing. A chain such as `a?.b?.c` counts once, not once per link: it short-circuits to a single place, and per-link counting inflated ordinary TypeScript far past the real branching. TypeScript-only syntax such as `as`, `satisfies`, type annotations, and non-null assertions adds nothing.
 
 Report the diagnostic at the function's declaration or derived name.
 

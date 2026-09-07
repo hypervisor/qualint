@@ -185,7 +185,7 @@ put it in an override.
 
 | Rule                             | Scope     | Default         | What it measures                                                         |
 | -------------------------------- | --------- | --------------- | ------------------------------------------------------------------------ |
-| `complexity/cyclomatic`          | function  | error, max 20   | Decision points: `if`, loops, `catch`, `?:`, `case`, `&& \|\| ??`, `?.`, default values |
+| `complexity/cyclomatic`          | function  | error, max 20   | Decision points: `if`, loops, `catch`, `?:`, `case`, `&& \|\| ??`, optional chains, default values |
 | `complexity/cognitive`           | function  | error, max 30   | How hard the function is to follow. Nested control flow costs more.      |
 | `complexity/npath`               | function  | error, max 1000 | Acyclic execution paths. Decisions in sequence multiply.                 |
 | `complexity/nesting`             | function  | error, max 5    | Deepest stack of enclosing control-flow constructs                       |

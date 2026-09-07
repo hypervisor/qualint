@@ -40,8 +40,11 @@ describe('complexity/cyclomatic', () => {
     assert.equal(body('a &&= 1; b ||= 2; c ??= 3;').cyclomaticComplexity, 4);
   });
 
-  it('counts each optional-chain segment', () => {
-    assert.equal(body('return a?.y?.z?.();').cyclomaticComplexity, 4);
+  it('counts an optional chain once, however many links it has', () => {
+    assert.equal(body('return a?.y;').cyclomaticComplexity, 2);
+    assert.equal(body('return a?.y?.z?.();').cyclomaticComplexity, 2);
+    assert.equal(body('return f(a?.y, b?.z);').cyclomaticComplexity, 3);
+    assert.equal(body('return a.y.z;').cyclomaticComplexity, 1);
   });
 
   it('counts parameter and destructuring defaults', () => {

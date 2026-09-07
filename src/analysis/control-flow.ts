@@ -181,23 +181,12 @@ export class ControlFlowWalker {
       case 'AssignmentPattern':
         this.flow.cyclomatic++;
         break;
-      case 'MemberExpression':
-        if (node.optional) {
-          this.flow.cyclomatic++;
-        } else if (node.computed) {
-        }
+      case 'ChainExpression':
+        // One decision for the whole chain. `a?.b?.c` short-circuits to the same
+        // place however many links it has, and counting per link inflated
+        // idiomatic TypeScript badly enough to swamp real branching.
+        this.flow.cyclomatic++;
         break;
-      case 'CallExpression':
-        if (node.optional) {
-          this.flow.cyclomatic++;
-        } else {
-          const from = node.typeArguments ? node.typeArguments.range[1] : node.callee.range[1];
-        }
-        break;
-      case 'NewExpression': {
-        const from = node.typeArguments ? node.typeArguments.range[1] : node.callee.range[1];
-        break;
-      }
       case 'BreakStatement':
       case 'ContinueStatement':
         if (node.label !== null) {

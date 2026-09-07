@@ -19,7 +19,7 @@ function owns:
   - each non-default switch case
   - each &&, || or ?? operator
   - each &&=, ||= or ??= logical assignment
-  - each optional-chain segment that may short-circuit (a?.b, fn?.())
+  - each optional chain, counted once however many links it has (a?.b?.c)
   - each default value in parameters or destructuring patterns
 
 else, finally, default, plain blocks and nested function bodies add nothing.
