@@ -104,6 +104,17 @@ async function findConfigFile(startDir: string): Promise<string | null> {
 }
 
 /**
+ * Rules as configured at the top level, without any per-file override. Used by
+ * project-scoped rules, which need one consistent set of thresholds to compare
+ * every file against.
+ */
+export function resolveRootRules(loaded: LoadedConfig): ResolvedRules {
+  const settings = defaultRuleSettings(loaded.config.preset);
+  applyLayer(settings, loaded.config.rules);
+  return enabledOnly(settings);
+}
+
+/**
  * Resolves the rule set for one file: the preset's defaults, then top-level
  * rules, then every matching override in order. Each layer replaces whole rule
  * values.
@@ -117,6 +128,10 @@ export function resolveRulesForFile(loaded: LoadedConfig, absolutePath: string):
       applyLayer(settings, override.rules);
     }
   }
+  return enabledOnly(settings);
+}
+
+function enabledOnly(settings: ReadonlyMap<RuleId, RuleSetting>): ResolvedRules {
   const resolved = new Map<RuleId, Exclude<RuleSetting, 'off'>>();
   for (const [id, setting] of settings) {
     if (setting !== 'off') {

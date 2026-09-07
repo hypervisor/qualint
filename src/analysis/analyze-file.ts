@@ -4,6 +4,7 @@ import type { ParsedFile } from '../parser/parse-file.ts';
 import { locationOf, positionOf } from './ast.ts';
 import { ControlFlowWalker, type FoundFunction } from './control-flow.ts';
 import { deriveFunctionName } from './function-context.ts';
+import { fingerprintFunction } from './fingerprint.ts';
 import { computeNpath } from './npath.ts';
 import { buildLineTable, countSourceLines, type LineTable } from './source-lines.ts';
 
@@ -57,6 +58,7 @@ function buildFunctionMetrics(found: FoundFunction, code: string, lines: LineTab
       .sort((a, b) => b.count - a.count || (a.kind < b.kind ? -1 : 1)),
     maximumConditionComplexity,
     conditions: flow.conditions,
+    structure: fingerprintFunction(node),
   };
 }
 

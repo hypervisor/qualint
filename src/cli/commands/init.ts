@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { CONFIG_FILE_NAMES } from '../../config/defaults.ts';
-import { type PresetName, presetMax } from '../../config/presets.ts';
+import { presetOptions } from '../../config/defaults.ts';
+import type { PresetName } from '../../config/presets.ts';
 import { RULES } from '../../rules/registry.ts';
 import type { CliArguments } from '../args.ts';
 import { type CliContext, EXIT_FAILURE, EXIT_OK, writeLine } from '../context.ts';
@@ -35,8 +36,13 @@ async function existingConfig(cwd: string): Promise<string | null> {
 
 export function renderConfig(preset: PresetName): string {
   const ruleLines = [...RULES.values()].map((rule) => {
-    const value = rule.defaultSeverity === 'off' ? 'off' : `[${rule.defaultSeverity}, { max: ${presetMax(rule.id, preset)} }]`;
-    return `#   ${rule.id}: ${value}`;
+    if (rule.defaultSeverity === 'off') {
+      return `#   ${rule.id}: off`;
+    }
+    const options = Object.entries(presetOptions(rule.id, preset))
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+    return `#   ${rule.id}: [${rule.defaultSeverity}, { ${options} }]`;
   });
   return `# qualint configuration. \`qualint explain <rule>\` shows how each rule is scored.
 # Presets: strict | standard | relaxed (see README for the numbers).
@@ -62,5 +68,7 @@ overrides:
     rules:
       size/function: off
       size/file: off
+      # Parameterised cases legitimately look alike.
+      duplicate/function: off
 `;
 }

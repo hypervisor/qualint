@@ -34,7 +34,7 @@ The first release analyzes individual source files without building a TypeScript
 - Type-aware analysis or use of the TypeScript type checker.
 - Module resolution, dependency graphs, cycles, fan-in, or fan-out.
 - Framework-specific React rules or JSX-specific quality scoring.
-- Duplicate-code detection.
+- ~~Duplicate-code detection.~~ Shipped after v1 as `duplicate/function`; see the note below.
 - Test coverage, CRAP scores, Git history, or churn analysis.
 - Style, naming, formatting, correctness, or security linting already covered by ESLint and other tools.
 - A combined quality grade or maintainability score.
@@ -161,6 +161,13 @@ Rule values use one of these forms:
 
 When only a severity is provided, the rule uses the default threshold. An override replaces the matching rule value; it does not merge the options object.
 
+> **Added after v1.** `duplicate/function` compares normalized function syntax
+> trees across every file in a run, which makes it the first project-scoped
+> rule: it needs a pass over all files after the per-file analysis, rather than
+> fitting the one-file-at-a-time model in section 6. Options are `max` (copies
+> allowed) and `minSize` (smallest structure compared), the latter set by
+> preset.
+>
 > **Changed after v1.** The `complexity/halstead-difficulty` rule and all
 > Halstead metrics were removed. The rule was off by default, its output
 > implied no specific action, and the token-classification table it required

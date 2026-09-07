@@ -26,6 +26,16 @@ export interface CognitiveContribution {
   total: number;
 }
 
+/**
+ * Normalized shape of a function, for finding copy-paste. Two functions with
+ * the same `hash` have the same structure once names, literals and types are
+ * stripped; `size` counts the nodes that went into it.
+ */
+export interface StructuralFingerprint {
+  hash: string;
+  size: number;
+}
+
 /** How many decision points of each kind a function owns, for explaining a score. */
 export interface DecisionCount {
   kind: string;
@@ -63,6 +73,7 @@ export interface FunctionMetrics {
   decisions: DecisionCount[];
   maximumConditionComplexity: number;
   conditions: ConditionGroup[];
+  structure: StructuralFingerprint;
 }
 
 export interface FileMetrics {
@@ -78,6 +89,7 @@ export interface FileMetrics {
 export type Severity = 'error' | 'warn';
 
 export type RuleId =
+  | 'duplicate/function'
   | 'complexity/cyclomatic'
   | 'complexity/cognitive'
   | 'complexity/npath'
@@ -127,6 +139,8 @@ export interface RunSummary {
 
 export interface RuleOptions {
   max: number;
+  /** duplicate/function only: smallest structure worth comparing. */
+  minSize?: number;
 }
 
 export interface ResolvedRule {

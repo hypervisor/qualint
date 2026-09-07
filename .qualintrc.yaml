@@ -21,3 +21,5 @@ overrides:
     rules:
       size/function: off
       size/statements: [error, { max: 60 }]
+      # Parameterised cases legitimately look alike.
+      duplicate/function: off

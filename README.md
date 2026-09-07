@@ -2,8 +2,8 @@
 
 A code quality gate for JavaScript and TypeScript. It measures the things that
 tend to rot when code is written quickly, by people or by agents: control-flow
-complexity, nesting depth, oversized functions, dense conditions, files that
-keep growing. When a limit is exceeded it tells you exactly which function,
+control-flow complexity, nesting depth, oversized functions, dense conditions,
+copy-pasted logic, files that keep growing. When a limit is exceeded it tells you exactly which function,
 which line, what the number is and what the limit was, and exits non-zero.
 
 It's meant to sit next to `tsc` and `eslint` in your check script, and it's
@@ -128,6 +128,7 @@ exclude:
   - '**/coverage/**'
   - '**/*.generated.*'
 rules:
+  duplicate/function: [error, { max: 1, minSize: 40 }]
   complexity/cyclomatic: [error, { max: 20 }]
   complexity/cognitive: [error, { max: 30 }]
   complexity/npath: [error, { max: 1000 }]
@@ -142,6 +143,7 @@ overrides:
     rules:
       size/function: off
       size/file: off
+      duplicate/function: off   # parameterised cases legitimately look alike
 ```
 
 A rule value is `off`, `warn`, `error`, or `[severity, { max: n }]`. A bare
@@ -153,6 +155,7 @@ to the preset's value rather than keeping the top-level one.
 
 | Rule                             | strict | standard | relaxed |
 | -------------------------------- | -----: | -------: | ------: |
+| `duplicate/function` (`minSize`) |     25 |       40 |      70 |
 | `complexity/cyclomatic`          |     10 |       20 |      30 |
 | `complexity/cognitive`           |     15 |       30 |      50 |
 | `complexity/npath`               |    200 |     1000 |    5000 |
@@ -190,6 +193,7 @@ put it in an override.
 
 | Rule                             | Scope     | Default         | What it measures                                                         |
 | -------------------------------- | --------- | --------------- | ------------------------------------------------------------------------ |
+| `duplicate/function`             | project   | error, max 1    | Functions with identical structure, ignoring names, literals and types   |
 | `complexity/cyclomatic`          | function  | error, max 20   | Decision points: `if`, loops, `catch`, `?:`, `case`, `&& \|\| ??`, optional chains, default values |
 | `complexity/cognitive`           | function  | error, max 30   | How hard the function is to follow. Nested control flow costs more.      |
 | `complexity/npath`               | function  | error, max 1000 | Acyclic execution paths. Decisions in sequence multiply.                 |
@@ -209,6 +213,36 @@ methods, constructors, getters and setters. A nested function doesn't add its
 control flow, statements or tokens to the function around it, though its lines
 still count toward the outer function's size. Anonymous functions get a name
 from context, like `items.map callback`, `onClick` or `<anonymous at 24:7>`.
+
+### Duplicate detection
+
+`duplicate/function` finds functions whose syntax trees have the same shape.
+Names, literal values, type annotations and assertion wrappers are stripped
+first, so a copied function still matches after it has been renamed and had its
+constants changed. Operators, declaration kinds and optional access are kept,
+so `a + b` never matches `a - b`.
+
+Each group of duplicates produces one diagnostic, on the first occurrence,
+naming where the others are:
+
+```text
+src/carts.ts
+
+  1:8  error  Function `validateCart` is one of 3 identical implementations; maximum is 1  duplicate/function
+              also at src/orders.ts:1 validateOrder, src/legacy/basket.ts:14 validateBasket
+```
+
+`minSize` is the smallest structure worth comparing, counted in syntax-tree
+nodes. For scale: a one-line arrow is about 6 nodes, a five-line guard clause
+23, a twelve-line switch 38, an eight-line validator with a loop 56, a small
+React component 88. The `standard` floor of 40 sits below that validator and
+above guard clauses, which legitimately repeat. `max` is how many copies are
+allowed before it counts as duplication.
+
+Two limits worth knowing. Comparison covers the files analyzed in this run, so
+`--changed` only sees duplicates among the changed files; a full run is what
+catches a new copy of something old. And matching is exact on structure, so a
+copy that gained a line is not reported.
 
 ## Inspect
 

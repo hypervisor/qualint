@@ -1,7 +1,7 @@
 import type { RuleId, Severity } from '../types.ts';
 import { RULES, isRuleId } from '../rules/registry.ts';
-import { type RuleSetting } from './defaults.ts';
-import { DEFAULT_PRESET, isPresetName, PRESET_NAMES, type PresetName, presetMax } from './presets.ts';
+import { presetOptions, type RuleSetting } from './defaults.ts';
+import { DEFAULT_PRESET, isPresetName, PRESET_NAMES, type PresetName } from './presets.ts';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -116,26 +116,30 @@ function validateRuleValue(id: RuleId, value: unknown, path: string, preset: Pre
   if (severity === 'off') {
     return 'off';
   }
-  let max = presetMax(id, preset);
-  if (options !== undefined) {
-    const record = expectObject(options, path);
-    for (const key of Object.keys(record)) {
-      if (key !== 'max') {
-        throw new ConfigError(`Unknown option "${key}" in "${path}"; the only option is "max"`);
-      }
-    }
-    const rawMax = record['max'];
-    if (rawMax !== undefined) {
-      if (typeof rawMax !== 'number' || !Number.isFinite(rawMax) || rawMax < 0) {
-        throw new ConfigError(`"${path}".max must be a non-negative number`);
-      }
-      if (!rule.fractional && !Number.isInteger(rawMax)) {
-        throw new ConfigError(`"${path}".max must be an integer`);
-      }
-      max = rawMax;
-    }
+  const resolved = presetOptions(id, preset);
+  if (options === undefined) {
+    return { severity: severity as Severity, options: resolved };
   }
-  return { severity: severity as Severity, options: { max } };
+  const allowed = ['max', ...(rule.extraOptions ?? [])];
+  const record = expectObject(options, path);
+  for (const key of Object.keys(record)) {
+    if (!allowed.includes(key)) {
+      const list = allowed.map((name) => `"${name}"`).join(', ');
+      throw new ConfigError(`Unknown option "${key}" in "${path}"; expected one of ${list}`);
+    }
+    const value = record[key];
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      throw new ConfigError(`"${path}".${key} must be a non-negative number`);
+    }
+    if (!(key === 'max' && rule.fractional) && !Number.isInteger(value)) {
+      throw new ConfigError(`"${path}".${key} must be an integer`);
+    }
+    Object.assign(resolved, { [key]: value });
+  }
+  return { severity: severity as Severity, options: resolved };
 }
 
 function expectObject(value: unknown, path: string): Record<string, unknown> {

@@ -235,6 +235,54 @@ overrides:
     assert.match(result.stdout, /✖ 1 file could not be analyzed/);
   });
 
+  it('finds copy-pasted functions across files', async () => {
+    const copy = (name: string, n: string) => `export function ${name}(input) {
+  const errors = [];
+  if (!input.id) { errors.push('${n}'); }
+  if (input.qty < ${n}) { errors.push('${n}'); }
+  for (const tag of input.tags) {
+    if (tag.length > ${n}) { errors.push(tag); }
+  }
+  return errors;
+}
+`;
+    const dir = await fixture({
+      'src/orders.ts': copy('validateOrder', '1'),
+      'src/carts.ts': copy('validateCart', '9'),
+      'src/other.ts': 'export const twice = (n: number): number => n * 2;\n',
+      'src/thing.test.ts': copy('validateSpec', '4'),
+      '.qualintrc.yaml': 'preset: strict\n',
+    });
+    const result = await cli(dir);
+    assert.equal(result.code, 1);
+    // Reported once, on the first occurrence, naming the rest.
+    assert.match(
+      result.stdout,
+      /^src\/carts\.ts\n\n  1:8  error  Function `validateCart` is one of 3 identical implementations; maximum is 1  duplicate\/function\n\s+also at src\/orders\.ts:1 validateOrder, src\/thing\.test\.ts:1 validateSpec\n/,
+    );
+    assert.match(result.stdout, /✖ 1 problem/);
+
+    // An override can exempt files, and the group shrinks to match.
+    await fs.writeFile(
+      path.join(dir, '.qualintrc.yaml'),
+      'preset: strict\noverrides:\n  - files: [\'**/*.test.*\']\n    rules:\n      duplicate/function: off\n',
+    );
+    const exempt = await cli(dir, '--format', 'json');
+    const dupes = JSON.parse(exempt.stdout).files.flatMap((f: { diagnostics: { rule: string }[] }) =>
+      f.diagnostics.filter((d) => d.rule === 'duplicate/function'),
+    );
+    assert.equal(dupes.length, 1);
+
+    // Turning it off entirely leaves nothing.
+    await fs.writeFile(path.join(dir, '.qualintrc.yaml'), 'preset: strict\nrules:\n  duplicate/function: off\n');
+    const off = await cli(dir);
+    assert.equal(off.code, 0);
+
+    // minSize decides how small a shared shape has to be before it is ignored.
+    await fs.writeFile(path.join(dir, '.qualintrc.yaml'), 'rules:\n  duplicate/function: [error, { minSize: 500 }]\n');
+    assert.equal((await cli(dir)).code, 0);
+  });
+
   it('explains where a score comes from instead of only naming it', async () => {
     const dir = await fixture({
       '.qualintrc.yaml': 'preset: strict\n',
@@ -328,7 +376,7 @@ ${Array.from({ length: 12 }, (_, i) => `  if (item.k === ${i}) { out += ${i}; }`
     const known = await cli(dir, 'explain', 'complexity/cognitive');
     assert.equal(known.code, 0);
     assert.match(known.stdout, /^complexity\/cognitive\n/);
-    assert.match(known.stdout, /Default: error, maximum 30\nPresets: strict 15, standard 30, relaxed 50/);
+    assert.match(known.stdout, /Default: error, maximum 30\nPresets \(max\): strict 15, standard 30, relaxed 50/);
     const list = await cli(dir, 'explain');
     assert.equal(list.code, 0);
     assert.match(list.stdout, /size\/parameters/);
@@ -344,6 +392,7 @@ ${Array.from({ length: 12 }, (_, i) => `  if (item.k === ${i}) { out += ${i}; }`
     const written = await fs.readFile(path.join(dir, '.qualintrc.yaml'), 'utf8');
     assert.match(written, /^preset: strict$/m);
     assert.match(written, /^#   complexity\/cyclomatic: \[error, \{ max: 10 \}\]$/m);
+    assert.match(written, /^#   duplicate\/function: \[error, \{ max: 1, minSize: 25 \}\]$/m);
     assert.match(written, /^#   size\/parameters: \[error, \{ max: 5 \}\]$/m);
 
     // The generated file loads, and its preset is in effect.

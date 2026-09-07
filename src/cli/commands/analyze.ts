@@ -1,15 +1,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeFile } from '../../analysis/analyze-file.ts';
-import { type LoadedConfig, resolveRulesForFile } from '../../config/load-config.ts';
+import { type LoadedConfig, resolveRootRules, resolveRulesForFile } from '../../config/load-config.ts';
 import { listChangedFiles } from '../../files/changed-files.ts';
 import { discoverFiles } from '../../files/discover-files.ts';
 import { toPosixPath } from '../../files/glob.ts';
 import { formatJson } from '../../formatters/json.ts';
 import { formatStylish } from '../../formatters/stylish.ts';
 import { looksMinified, ParseFailure, parseSource } from '../../parser/parse-file.ts';
-import { compareStrings, runRules } from '../../rules/registry.ts';
-import type { FileOutcome, RunSummary } from '../../types.ts';
+import { compareStrings } from '../../compare.ts';
+import { compareDiagnostics, runProjectRules, runRules } from '../../rules/registry.ts';
+import type { FileOutcome, FileResult, RunSummary } from '../../types.ts';
 import type { CliArguments } from '../args.ts';
 import { type CliContext, EXIT_FAILURE, EXIT_OK, EXIT_PROBLEMS, writeLine } from '../context.ts';
 
@@ -114,6 +115,7 @@ export async function runAnalyze(args: CliArguments, loaded: LoadedConfig, conte
     writeLine(context.stderr, `qualint: skipped ${skipped} file${skipped === 1 ? '' : 's'} that look generated`);
   }
   outcomes.sort((a, b) => compareStrings(a.path, b.path));
+  addProjectDiagnostics(outcomes, loaded, context.cwd);
   const summary = summarize(outcomes);
   writeReport(outcomes, summary, args, context);
   return exitCodeFor(summary, args, context);
@@ -130,6 +132,28 @@ async function onlyChanged(files: readonly string[], args: CliArguments, context
     writeLine(context.stderr, `qualint: ${kept.length} of ${files.length} files changed ${scope}`);
   }
   return kept;
+}
+
+/**
+ * Applies rules that compare files with one another, such as duplicate
+ * detection, and merges their diagnostics into the files they belong to.
+ */
+function addProjectDiagnostics(outcomes: readonly FileOutcome[], loaded: LoadedConfig, cwd: string): void {
+  const analyzed = outcomes.filter((outcome): outcome is FileResult => outcome.kind === 'analyzed');
+  const byPath = runProjectRules(
+    analyzed.map((outcome) => ({ path: outcome.path, metrics: outcome.metrics })),
+    resolveRootRules(loaded),
+    (filePath) => resolveRulesForFile(loaded, path.resolve(cwd, filePath)),
+  );
+  if (byPath.size === 0) {
+    return;
+  }
+  for (const outcome of analyzed) {
+    const extra = byPath.get(outcome.path);
+    if (extra !== undefined) {
+      outcome.diagnostics = [...outcome.diagnostics, ...extra].sort(compareDiagnostics);
+    }
+  }
 }
 
 function writeReport(outcomes: readonly FileOutcome[], summary: RunSummary, args: CliArguments, context: CliContext): void {
