@@ -161,6 +161,28 @@ overrides:
     assert.match(limited.stderr, /1 warnings exceed --max-warnings 0/);
   });
 
+  it('keeps the analysis root at the working directory, wherever the config lives', async () => {
+    const dir = await fixture({ 'src/complex.ts': COMPLEX, 'src/nested/also.ts': COMPLEX, 'other/x.ts': SIMPLE });
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'qualint-cfg-'));
+    await fs.writeFile(path.join(outside, 'shared.yaml'), 'preset: strict\n');
+
+    // A config pointed at from outside the project must not move the walk to its own directory.
+    const external = await cli(dir, '--config', path.join(outside, 'shared.yaml'), '--format', 'json');
+    assert.equal(JSON.parse(external.stdout).summary.analyzedFiles, 3);
+
+    // Running from a subdirectory analyzes that subdirectory, not the whole project.
+    await fs.writeFile(path.join(dir, '.qualintrc.yaml'), 'include: [src/**/*]\n');
+    const fromRoot = await cli(dir, '--format', 'json');
+    assert.equal(JSON.parse(fromRoot.stdout).summary.analyzedFiles, 2);
+    const fromSub = await cli(path.join(dir, 'src', 'nested'), '--format', 'json');
+    assert.equal(JSON.parse(fromSub.stdout).summary.analyzedFiles, 1);
+
+    // A working directory disjoint from every include pattern matches nothing, and says so.
+    const disjoint = await cli(path.join(dir, 'other'));
+    assert.equal(disjoint.code, 0);
+    assert.equal(disjoint.stdout, 'no files matched\n');
+  });
+
   it('rejects invalid configuration with exit 2 and a precise message', async () => {
     const unknownRule = await fixture({ '.qualintrc.json': JSON.stringify({ rules: { 'complexity/bogus': 'error' } }), 'a.ts': SIMPLE });
     const first = await cli(unknownRule);
@@ -279,7 +301,7 @@ overrides:
 
     const nothing = await cli(dir, '--changed');
     assert.equal(nothing.code, 0);
-    assert.equal(nothing.stdout, '✔ no changed files to analyze\n');
+    assert.equal(nothing.stdout, 'no changed files to analyze\n');
 
     // Committed on a branch, then modified in the working tree, then a new untracked file.
     await git('checkout', '-q', '-b', 'feature');

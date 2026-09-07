@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { isInside } from '../config/load-config.ts';
 import { isSupportedFile } from '../parser/parse-file.ts';
 import { literalPrefix, matchesAnyGlob, toPosixPath } from './glob.ts';
 
@@ -7,6 +8,8 @@ export interface DiscoverOptions {
   cwd: string;
   /** Directory that include/exclude patterns are relative to. */
   baseDir: string;
+  /** Directory the walk starts from. Files outside it are never discovered. */
+  rootDir: string;
   include: readonly string[] | null;
   exclude: readonly string[];
   /** Explicit files or directories from the command line. */
@@ -90,13 +93,23 @@ async function collectConfigured(
   return [];
 }
 
+/**
+ * Directories to walk. Each `include` pattern contributes its literal prefix,
+ * clamped to the analysis root: a prefix below the root is used as-is, a prefix
+ * containing the root narrows to the root, and a prefix disjoint from the root
+ * is dropped because none of its files are below the root.
+ */
 function traversalRoots(options: DiscoverOptions): string[] {
   if (options.include === null) {
-    return [options.baseDir];
+    return [options.rootDir];
   }
   const roots = new Set<string>();
   for (const pattern of options.include) {
-    roots.add(path.resolve(options.baseDir, literalPrefix(pattern)));
+    const prefix = path.resolve(options.baseDir, literalPrefix(pattern));
+    const clamped = clampToRoot(prefix, options.rootDir);
+    if (clamped !== null) {
+      roots.add(clamped);
+    }
   }
   // Drop roots nested inside another root so files are visited once.
   const sorted = [...roots].sort((a, b) => a.length - b.length);
@@ -107,6 +120,13 @@ function traversalRoots(options: DiscoverOptions): string[] {
     }
   }
   return result;
+}
+
+function clampToRoot(prefix: string, rootDir: string): string | null {
+  if (isInside(prefix, rootDir)) {
+    return prefix;
+  }
+  return isInside(rootDir, prefix) ? rootDir : null;
 }
 
 async function walk(

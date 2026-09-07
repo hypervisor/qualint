@@ -11,8 +11,14 @@ export interface LoadedConfig {
   config: QualintConfig;
   /** Absolute path of the configuration file, or null when defaults are in use. */
   configPath: string | null;
-  /** Directory that include, exclude and override patterns are relative to. */
+  /**
+   * Directory that include, exclude and override patterns are relative to: the
+   * configuration file's directory when the working directory sits inside it,
+   * otherwise the working directory. Never the analysis root; see `rootDir`.
+   */
   baseDir: string;
+  /** Directory the file walk starts from. Always the working directory. */
+  rootDir: string;
   /** Effective exclusion patterns. */
   exclude: readonly string[];
 }
@@ -31,7 +37,7 @@ export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConf
   const configPath = options.explicitPath !== undefined ? path.resolve(options.cwd, options.explicitPath) : await findConfigFile(options.cwd);
   if (configPath === null) {
     const config: QualintConfig = { preset: DEFAULT_PRESET, include: null, exclude: null, rules: new Map(), overrides: [] };
-    return { config, configPath: null, baseDir: options.cwd, exclude: DEFAULT_EXCLUDE };
+    return { config, configPath: null, baseDir: options.cwd, rootDir: options.cwd, exclude: DEFAULT_EXCLUDE };
   }
 
   let text: string;
@@ -58,9 +64,26 @@ export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConf
   return {
     config,
     configPath,
-    baseDir: path.dirname(configPath),
+    baseDir: patternBase(path.dirname(configPath), options.cwd),
+    rootDir: options.cwd,
     exclude: config.exclude ?? DEFAULT_EXCLUDE,
   };
+}
+
+/**
+ * Patterns belong to the project the configuration describes, so they resolve
+ * against its directory. A configuration pointed at from outside that tree
+ * (`--config /etc/qualint.yaml`) describes no particular project, so its
+ * patterns resolve against the working directory instead.
+ */
+function patternBase(configDir: string, cwd: string): string {
+  return isInside(cwd, configDir) ? configDir : cwd;
+}
+
+/** True when `child` is `parent` or sits below it. */
+export function isInside(child: string, parent: string): boolean {
+  const relative = path.relative(parent, child);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 async function findConfigFile(startDir: string): Promise<string | null> {

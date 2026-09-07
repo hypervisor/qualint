@@ -62,6 +62,7 @@ export async function runAnalyze(args: CliArguments, loaded: LoadedConfig, conte
   const discovered = await discoverFiles({
     cwd: context.cwd,
     baseDir: loaded.baseDir,
+    rootDir: loaded.rootDir,
     include: loaded.config.include,
     exclude: loaded.exclude,
     positional: args.positionals,
@@ -79,11 +80,11 @@ export async function runAnalyze(args: CliArguments, loaded: LoadedConfig, conte
     writeLine(context.stderr, `qualint: configuration: ${source}`);
   }
   const files = args.changed ? await onlyChanged(discovered.files, args, context) : discovered.files;
-  if (args.changed && files.length === 0) {
+  if (files.length === 0) {
     if (args.format === 'json') {
       context.stdout.write(formatJson([], summarize([]), { includeFunctions: false }));
     } else {
-      writeLine(context.stdout, '✔ no changed files to analyze');
+      writeLine(context.stdout, args.changed ? 'no changed files to analyze' : 'no files matched');
     }
     return EXIT_OK;
   }
